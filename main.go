@@ -21,6 +21,7 @@ var (
 	URL             string
 	RefreshInterval string
 	ListenAddress   string
+	SubKey          string
 )
 
 func main() {
@@ -33,6 +34,11 @@ func main() {
 			EnvVar:      "URL",
 			Value:       "channels.yaml",
 			Destination: &URL,
+		},
+		cli.StringFlag{
+			Name:        "config-key",
+			EnvVar:      "SUBKEY",
+			Destination: &SubKey,
 		},
 		cli.StringFlag{
 			Name:        "refresh-interval",
@@ -65,7 +71,7 @@ func run(c *cli.Context) error {
 		return errors.Wrapf(err, "failed to parse %s", RefreshInterval)
 	}
 
-	config, err := config.NewConfig(ctx, URL, intval)
+	config, err := config.NewConfig(ctx, URL, SubKey, intval)
 	if err != nil {
 		return err
 	}

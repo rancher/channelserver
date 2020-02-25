@@ -2,12 +2,14 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 
 	"github.com/google/go-github/v29/github"
 	"github.com/hashicorp/go-getter"
 	"github.com/rancher/channelserver/pkg/model"
+	"github.com/rancher/wrangler/pkg/data/convert"
 	"sigs.k8s.io/yaml"
 )
 
@@ -34,14 +36,29 @@ func get(ctx context.Context, url string) ([]byte, error) {
 	return ioutil.ReadAll(tmp)
 }
 
-func GetConfig(ctx context.Context, configURL string) (*model.ChannelsConfig, error) {
+func GetConfig(ctx context.Context, configURL, subKey string) (*model.ChannelsConfig, error) {
+	var (
+		data   = map[string]interface{}{}
+		config = &model.ChannelsConfig{}
+	)
+
 	content, err := get(ctx, configURL)
 	if err != nil {
 		return nil, err
 	}
 
-	config := &model.ChannelsConfig{}
-	return config, yaml.Unmarshal(content, config)
+	if subKey == "" {
+		return config, yaml.Unmarshal(content, config)
+	}
+
+	if err := yaml.Unmarshal(content, data); err != nil {
+		return nil, err
+	}
+	data, _ = data[subKey].(map[string]interface{})
+	if data == nil {
+		return nil, fmt.Errorf("failed to find key %s in config", subKey)
+	}
+	return config, convert.ToObj(data, config)
 }
 
 func GetReleases(ctx context.Context, client *github.Client, owner, repo string) ([]string, error) {

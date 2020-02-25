@@ -21,15 +21,15 @@ type Config struct {
 	config   *model.ChannelsConfig
 }
 
-func NewConfig(ctx context.Context, url string, refresh time.Duration) (*Config, error) {
+func NewConfig(ctx context.Context, url, subKey string, refresh time.Duration) (*Config, error) {
 	c := &Config{}
-	if err := c.loadConfig(ctx, url); err != nil {
+	if err := c.loadConfig(ctx, url, subKey); err != nil {
 		return nil, err
 	}
 
 	go func() {
 		for range ticker.Context(ctx, refresh) {
-			if err := c.loadConfig(ctx, url); err != nil {
+			if err := c.loadConfig(ctx, url, subKey); err != nil {
 				logrus.Errorf("failed to reload configuration from %s: %v", url, err)
 			}
 		}
@@ -38,8 +38,8 @@ func NewConfig(ctx context.Context, url string, refresh time.Duration) (*Config,
 	return c, nil
 }
 
-func (c *Config) loadConfig(ctx context.Context, url string) error {
-	config, err := GetConfig(ctx, url)
+func (c *Config) loadConfig(ctx context.Context, url, subKey string) error {
+	config, err := GetConfig(ctx, url, subKey)
 	if err != nil {
 		return err
 	}
