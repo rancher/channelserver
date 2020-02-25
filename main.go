@@ -15,9 +15,11 @@ import (
 )
 
 var (
-	Version         = "v0.0.0-dev"
-	GitCommit       = "HEAD"
-	URL             string
+	Version   = "v0.0.0-dev"
+	GitCommit = "HEAD"
+	URLs      = cli.StringSlice{
+		"channels.yaml",
+	}
 	RefreshInterval string
 	ListenAddress   string
 	SubKey          string
@@ -28,11 +30,10 @@ func main() {
 	app.Name = "Channel Server"
 	app.Version = fmt.Sprintf("%s (%s)", Version, GitCommit)
 	app.Flags = []cli.Flag{
-		cli.StringFlag{
-			Name:        "url",
-			EnvVar:      "URL",
-			Value:       "channels.yaml",
-			Destination: &URL,
+		cli.StringSliceFlag{
+			Name:   "url",
+			EnvVar: "URL",
+			Value:  &URLs,
 		},
 		cli.StringFlag{
 			Name:        "config-key",
@@ -68,7 +69,7 @@ func run(c *cli.Context) error {
 		return errors.Wrapf(err, "failed to parse %s", RefreshInterval)
 	}
 
-	config, err := config.NewConfig(ctx, URL, SubKey, intval)
+	config, err := config.NewConfig(ctx, SubKey, intval, URLs...)
 	if err != nil {
 		return err
 	}

@@ -13,6 +13,21 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+func getURLs(ctx context.Context, urls ...string) ([]byte, error) {
+	var (
+		bytes []byte
+		err   error
+	)
+	for _, url := range urls {
+		bytes, err = get(ctx, url)
+		if err == nil {
+			break
+		}
+	}
+
+	return bytes, err
+}
+
 func get(ctx context.Context, url string) ([]byte, error) {
 	content, err := ioutil.ReadFile(url)
 	if err == nil {
@@ -36,13 +51,13 @@ func get(ctx context.Context, url string) ([]byte, error) {
 	return ioutil.ReadAll(tmp)
 }
 
-func GetConfig(ctx context.Context, configURL, subKey string) (*model.ChannelsConfig, error) {
+func GetConfig(ctx context.Context, subKey string, configURLs ...string) (*model.ChannelsConfig, error) {
 	var (
 		data   = map[string]interface{}{}
 		config = &model.ChannelsConfig{}
 	)
 
-	content, err := get(ctx, configURL)
+	content, err := getURLs(ctx, configURLs...)
 	if err != nil {
 		return nil, err
 	}
