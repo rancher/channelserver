@@ -1,9 +1,9 @@
 package model
 
 type ChannelsConfig struct {
-	Channels     []Channel      `json:"channels,omitempty"`
-	GitHub       GitHubReleases `json:"github,omitempty"`
-	RedirectBase string         `json:"redirectBase,omitempty"`
+	Channels     []Channel `json:"channels,omitempty"`
+	GitHub       *GitHub   `json:"github,omitempty"`
+	RedirectBase string    `json:"redirectBase,omitempty"`
 }
 
 type Channel struct {
@@ -13,7 +13,7 @@ type Channel struct {
 	ExcludeRegexp string `json:"excludeRegexp,omitempty"`
 }
 
-type GitHubReleases struct {
+type GitHub struct {
 	APIURL string `json:"api,omitempty"`
 	Owner  string `json:"owner,omitempty"`
 	Repo   string `json:"repo,omitempty"`

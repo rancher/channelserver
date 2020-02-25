@@ -51,7 +51,7 @@ func GetConfig(ctx context.Context, configURL, subKey string) (*model.ChannelsCo
 		return config, yaml.Unmarshal(content, config)
 	}
 
-	if err := yaml.Unmarshal(content, data); err != nil {
+	if err := yaml.Unmarshal(content, &data); err != nil {
 		return nil, err
 	}
 	data, _ = data[subKey].(map[string]interface{})

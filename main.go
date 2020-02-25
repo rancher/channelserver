@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"os"
 	"time"
@@ -26,7 +25,7 @@ var (
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "Chanel Server"
+	app.Name = "Channel Server"
 	app.Version = fmt.Sprintf("%s (%s)", Version, GitCommit)
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
@@ -61,8 +60,6 @@ func main() {
 }
 
 func run(c *cli.Context) error {
-	flag.Parse()
-
 	logrus.SetOutput(os.Stderr)
 	ctx := signals.SetupSignalHandler(context.Background())
 

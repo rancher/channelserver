@@ -48,6 +48,10 @@ func (c *Config) loadConfig(ctx context.Context, url, subKey string) error {
 }
 
 func (c *Config) ghClient(config *model.ChannelsConfig) (*github.Client, error) {
+	if config.GitHub == nil {
+		return nil, nil
+	}
+
 	if c.gh == nil || c.url != config.GitHub.APIURL {
 		if config.GitHub.APIURL == "" {
 			return github.NewClient(nil), nil
@@ -68,9 +72,12 @@ func (c *Config) setConfig(ctx context.Context, config *model.ChannelsConfig) er
 		return err
 	}
 
-	releases, err := GetReleases(ctx, gh, config.GitHub.Owner, config.GitHub.Repo)
-	if err != nil {
-		return err
+	var releases []string
+	if gh != nil {
+		releases, err = GetReleases(ctx, gh, config.GitHub.Owner, config.GitHub.Repo)
+		if err != nil {
+			return err
+		}
 	}
 
 	if err := resolveChannels(releases, config); err != nil {
@@ -80,9 +87,11 @@ func (c *Config) setConfig(ctx context.Context, config *model.ChannelsConfig) er
 	c.Lock()
 	defer c.Unlock()
 	c.gh = gh
-	c.url = config.GitHub.APIURL
 	c.config = config
 	c.redirect = redirect
+	if config.GitHub != nil {
+		c.url = config.GitHub.APIURL
+	}
 
 	return nil
 }
