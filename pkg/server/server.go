@@ -23,13 +23,13 @@ func ListenAndServe(ctx context.Context, address string, config *config.Config) 
 		schema.CollectionMethods = []string{http.MethodGet}
 		schema.ResourceMethods = []string{http.MethodGet}
 	})
-	apiroot.Register(server.Schemas, []string{"v1"}, nil)
+	apiroot.Register(server.Schemas, []string{"v1-release"}, nil)
 
 	router := mux.NewRouter()
 	router.MatcherFunc(setType("apiRoot")).Path("/").Handler(server)
 	router.MatcherFunc(setType("apiRoot")).Path("/{name}").Handler(server)
-	router.Path("/{prefix:v1}/{type}").Handler(server)
-	router.Path("/{prefix:v1}/{type}/{name}").Handler(server)
+	router.Path("/{prefix:v1-release}/{type}").Handler(server)
+	router.Path("/{prefix:v1-release}/{type}/{name}").Handler(server)
 
 	next := handlers.LoggingHandler(os.Stdout, router)
 	handler := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
@@ -49,7 +49,7 @@ func setType(t string) mux.MatcherFunc {
 			match.Vars = map[string]string{}
 		}
 		match.Vars["type"] = t
-		match.Vars["prefix"] = "v1"
+		match.Vars["prefix"] = "v1-release"
 		return true
 	}
 }

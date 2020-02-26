@@ -13,19 +13,21 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func getURLs(ctx context.Context, urls ...string) ([]byte, error) {
+func getURLs(ctx context.Context, urls ...string) ([]byte, int, error) {
 	var (
 		bytes []byte
 		err   error
+		index int
 	)
-	for _, url := range urls {
+	for i, url := range urls {
+		index = i
 		bytes, err = get(ctx, url)
 		if err == nil {
 			break
 		}
 	}
 
-	return bytes, err
+	return bytes, index, err
 }
 
 func get(ctx context.Context, url string) ([]byte, error) {
@@ -51,29 +53,29 @@ func get(ctx context.Context, url string) ([]byte, error) {
 	return ioutil.ReadAll(tmp)
 }
 
-func GetConfig(ctx context.Context, subKey string, configURLs ...string) (*model.ChannelsConfig, error) {
+func GetConfig(ctx context.Context, subKey string, configURLs ...string) (*model.ChannelsConfig, int, error) {
 	var (
 		data   = map[string]interface{}{}
 		config = &model.ChannelsConfig{}
 	)
 
-	content, err := getURLs(ctx, configURLs...)
+	content, index, err := getURLs(ctx, configURLs...)
 	if err != nil {
-		return nil, err
+		return nil, index, err
 	}
 
 	if subKey == "" {
-		return config, yaml.Unmarshal(content, config)
+		return config, index, yaml.Unmarshal(content, config)
 	}
 
 	if err := yaml.Unmarshal(content, &data); err != nil {
-		return nil, err
+		return nil, index, err
 	}
 	data, _ = data[subKey].(map[string]interface{})
 	if data == nil {
-		return nil, fmt.Errorf("failed to find key %s in config", subKey)
+		return nil, index, fmt.Errorf("failed to find key %s in config", subKey)
 	}
-	return config, convert.ToObj(data, config)
+	return config, index, convert.ToObj(data, config)
 }
 
 func GetReleases(ctx context.Context, client *github.Client, owner, repo string) ([]string, error) {

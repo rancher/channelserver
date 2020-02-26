@@ -23,14 +23,17 @@ type Config struct {
 
 func NewConfig(ctx context.Context, subKey string, refresh time.Duration, urls ...string) (*Config, error) {
 	c := &Config{}
-	if err := c.loadConfig(ctx, subKey, urls...); err != nil {
+	if _, err := c.loadConfig(ctx, subKey, urls...); err != nil {
 		return nil, err
 	}
 
 	go func() {
 		for range ticker.Context(ctx, refresh) {
-			if err := c.loadConfig(ctx, subKey, urls...); err != nil {
+			if index, err := c.loadConfig(ctx, subKey, urls...); err != nil {
 				logrus.Errorf("failed to reload configuration from %s: %v", urls, err)
+			} else {
+				urls = urls[:index+1]
+				logrus.Infof("Loaded configuration from %s in %v", urls[index], urls)
 			}
 		}
 	}()
@@ -38,13 +41,13 @@ func NewConfig(ctx context.Context, subKey string, refresh time.Duration, urls .
 	return c, nil
 }
 
-func (c *Config) loadConfig(ctx context.Context, subKey string, urls ...string) error {
-	config, err := GetConfig(ctx, subKey, urls...)
+func (c *Config) loadConfig(ctx context.Context, subKey string, urls ...string) (int, error) {
+	config, index, err := GetConfig(ctx, subKey, urls...)
 	if err != nil {
-		return err
+		return index, err
 	}
 
-	return c.setConfig(ctx, config)
+	return index, c.setConfig(ctx, config)
 }
 
 func (c *Config) ghClient(config *model.ChannelsConfig) (*github.Client, error) {
