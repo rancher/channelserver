@@ -15,21 +15,22 @@ import (
 type Config struct {
 	sync.Mutex
 
-	url      string
-	redirect *url.URL
-	gh       *github.Client
-	config   *model.ChannelsConfig
+	url            string
+	redirect       *url.URL
+	gh             *github.Client
+	channelsConfig *model.ChannelsConfig
+	releasesConfig *model.ReleasesConfig
 }
 
-func NewConfig(ctx context.Context, subKey string, refresh time.Duration, urls ...string) (*Config, error) {
+func NewConfig(ctx context.Context, subKey string, refresh time.Duration, channelServerVersion string, urls ...string) (*Config, error) {
 	c := &Config{}
-	if _, err := c.loadConfig(ctx, subKey, urls...); err != nil {
+	if _, err := c.loadConfig(ctx, subKey, channelServerVersion, urls...); err != nil {
 		return nil, err
 	}
 
 	go func() {
 		for range ticker.Context(ctx, refresh) {
-			if index, err := c.loadConfig(ctx, subKey, urls...); err != nil {
+			if index, err := c.loadConfig(ctx, subKey, channelServerVersion, urls...); err != nil {
 				logrus.Errorf("failed to reload configuration from %s: %v", urls, err)
 			} else {
 				urls = urls[:index+1]
@@ -41,13 +42,23 @@ func NewConfig(ctx context.Context, subKey string, refresh time.Duration, urls .
 	return c, nil
 }
 
-func (c *Config) loadConfig(ctx context.Context, subKey string, urls ...string) (int, error) {
-	config, index, err := GetConfig(ctx, subKey, urls...)
+func (c *Config) loadConfig(ctx context.Context, subKey string, channelServerVersion string, urls ...string) (int, error) {
+	content, index, err := getURLs(ctx, urls...)
 	if err != nil {
 		return index, err
 	}
 
-	return index, c.setConfig(ctx, config)
+	config, err := GetChannelsConfig(ctx, content, subKey)
+	if err != nil {
+		return index, err
+	}
+
+	releases, err := GetReleasesConfig(content, channelServerVersion)
+	if err != nil {
+		return index, err
+	}
+
+	return index, c.setConfig(ctx, channelServerVersion, config, releases)
 }
 
 func (c *Config) ghClient(config *model.ChannelsConfig) (*github.Client, error) {
@@ -64,7 +75,7 @@ func (c *Config) ghClient(config *model.ChannelsConfig) (*github.Client, error) 
 	return c.gh, nil
 }
 
-func (c *Config) setConfig(ctx context.Context, config *model.ChannelsConfig) error {
+func (c *Config) setConfig(ctx context.Context, channelServerVersion string, config *model.ChannelsConfig, releases *model.ReleasesConfig) error {
 	gh, err := c.ghClient(config)
 	if err != nil {
 		return err
@@ -75,23 +86,24 @@ func (c *Config) setConfig(ctx context.Context, config *model.ChannelsConfig) er
 		return err
 	}
 
-	var releases []string
+	var ghReleases []string
 	if gh != nil {
-		releases, err = GetReleases(ctx, gh, config.GitHub.Owner, config.GitHub.Repo)
+		ghReleases, err = GetGHReleases(ctx, gh, config.GitHub.Owner, config.GitHub.Repo)
 		if err != nil {
 			return err
 		}
 	}
 
-	if err := resolveChannels(releases, config); err != nil {
+	if err := resolveChannels(ghReleases, config); err != nil {
 		return err
 	}
 
 	c.Lock()
 	defer c.Unlock()
 	c.gh = gh
-	c.config = config
+	c.channelsConfig = config
 	c.redirect = redirect
+	c.releasesConfig = releases
 	if config.GitHub != nil {
 		c.url = config.GitHub.APIURL
 	}
@@ -118,14 +130,20 @@ func resolveChannels(releases []string, config *model.ChannelsConfig) error {
 	return nil
 }
 
-func (c *Config) Config() *model.ChannelsConfig {
+func (c *Config) ChannelsConfig() *model.ChannelsConfig {
 	c.Lock()
 	defer c.Unlock()
-	return c.config
+	return c.channelsConfig
+}
+
+func (c *Config) ReleasesConfig() *model.ReleasesConfig {
+	c.Lock()
+	defer c.Unlock()
+	return c.releasesConfig
 }
 
 func (c *Config) Redirect(id string) (string, error) {
-	for _, channel := range c.config.Channels {
+	for _, channel := range c.channelsConfig.Channels {
 		if channel.Name == id && channel.Latest != "" {
 			return c.redirect.ResolveReference(&url.URL{
 				Path: channel.Latest,
