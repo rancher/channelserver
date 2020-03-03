@@ -20,9 +20,10 @@ var (
 	URLs      = cli.StringSlice{
 		"channels.yaml",
 	}
-	RefreshInterval string
-	ListenAddress   string
-	SubKey          string
+	RefreshInterval      string
+	ListenAddress        string
+	SubKey               string
+	ChannelServerVersion string
 )
 
 func main() {
@@ -52,6 +53,11 @@ func main() {
 			Value:       "0.0.0.0:8080",
 			Destination: &ListenAddress,
 		},
+		cli.StringFlag{
+			Name:        "channel-server-version",
+			EnvVar:      "CHANNEL_SERVER_VERSION",
+			Destination: &ChannelServerVersion,
+		},
 	}
 	app.Action = run
 
@@ -69,7 +75,7 @@ func run(c *cli.Context) error {
 		return errors.Wrapf(err, "failed to parse %s", RefreshInterval)
 	}
 
-	config, err := config.NewConfig(ctx, SubKey, intval, URLs...)
+	config, err := config.NewConfig(ctx, SubKey, intval, ChannelServerVersion, URLs...)
 	if err != nil {
 		return err
 	}

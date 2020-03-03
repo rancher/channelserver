@@ -22,6 +22,13 @@ channels:
   excludeRegexp: rc
 - name: v1.0-testing
   latestRegexp: v1\.0\..*
+releases:
+- version: v1.15.3+k3s2
+  minChannelServerVersion: v2.3.0
+  maxChannelServerVersion: v2.3.5
+- version: v1.17.4+k3s1
+  minChannelServerVersion: v2.4.0
+  maxChannelServerVersion: v2.4.5
 github:
   owner: rancher
   repo: k3s

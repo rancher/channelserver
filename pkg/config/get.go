@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/blang/semver"
 	"github.com/google/go-github/v29/github"
 	"github.com/hashicorp/go-getter"
 	"github.com/rancher/channelserver/pkg/model"
@@ -53,32 +54,66 @@ func get(ctx context.Context, url string) ([]byte, error) {
 	return ioutil.ReadAll(tmp)
 }
 
-func GetConfig(ctx context.Context, subKey string, configURLs ...string) (*model.ChannelsConfig, int, error) {
+func GetChannelsConfig(ctx context.Context, content []byte, subKey string) (*model.ChannelsConfig, error) {
 	var (
 		data   = map[string]interface{}{}
 		config = &model.ChannelsConfig{}
 	)
 
-	content, index, err := getURLs(ctx, configURLs...)
-	if err != nil {
-		return nil, index, err
-	}
-
 	if subKey == "" {
-		return config, index, yaml.Unmarshal(content, config)
+		return config, yaml.Unmarshal(content, config)
 	}
 
 	if err := yaml.Unmarshal(content, &data); err != nil {
-		return nil, index, err
+		return nil, err
 	}
 	data, _ = data[subKey].(map[string]interface{})
 	if data == nil {
-		return nil, index, fmt.Errorf("failed to find key %s in config", subKey)
+		return nil, fmt.Errorf("failed to find key %s in config", subKey)
 	}
-	return config, index, convert.ToObj(data, config)
+	return config, convert.ToObj(data, config)
 }
 
-func GetReleases(ctx context.Context, client *github.Client, owner, repo string) ([]string, error) {
+func GetReleasesConfig(content []byte, channelServerVersion string) (*model.ReleasesConfig, error) {
+	var allReleases model.ReleasesConfig
+	var availableReleases model.ReleasesConfig
+
+	if err := yaml.Unmarshal(content, &allReleases); err != nil {
+		return nil, err
+	}
+
+	// no server version specified, show all releases
+	if channelServerVersion == "" {
+		return &allReleases, nil
+	}
+
+	availableReleases = model.ReleasesConfig{}
+
+	serverVersion, err := semver.ParseTolerant(channelServerVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, release := range allReleases.Releases {
+		minServerVer, err := semver.ParseTolerant(release.ChannelServerMinVersion)
+		if err != nil {
+			continue
+		}
+
+		maxServerVer, err := semver.ParseTolerant(release.ChannelServerMaxVersion)
+		if err != nil {
+			continue
+		}
+
+		if serverVersion.GE(minServerVer) && serverVersion.LE(maxServerVer) {
+			availableReleases.Releases = append(availableReleases.Releases, release)
+		}
+	}
+
+	return &availableReleases, nil
+}
+
+func GetGHReleases(ctx context.Context, client *github.Client, owner, repo string) ([]string, error) {
 	var (
 		opt         = &github.ListOptions{}
 		allReleases []string

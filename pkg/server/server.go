@@ -11,6 +11,7 @@ import (
 	"github.com/rancher/channelserver/pkg/config"
 	"github.com/rancher/channelserver/pkg/model"
 	"github.com/rancher/channelserver/pkg/server/store"
+	"github.com/rancher/channelserver/pkg/server/store/release"
 	"github.com/rancher/steve/pkg/schemaserver/server"
 	"github.com/rancher/steve/pkg/schemaserver/store/apiroot"
 	"github.com/rancher/steve/pkg/schemaserver/types"
@@ -22,6 +23,10 @@ func ListenAndServe(ctx context.Context, address string, config *config.Config) 
 		schema.Store = store.New(config)
 		schema.CollectionMethods = []string{http.MethodGet}
 		schema.ResourceMethods = []string{http.MethodGet}
+	})
+	server.Schemas.MustImportAndCustomize(model.Release{}, func(schema *types.APISchema) {
+		schema.Store = release.New(config)
+		schema.CollectionMethods = []string{http.MethodGet}
 	})
 	apiroot.Register(server.Schemas, []string{"v1-release"}, nil)
 

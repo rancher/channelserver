@@ -22,7 +22,7 @@ func New(config *config.Config) *ChannelStore {
 
 func (c *ChannelStore) List(_ *types.APIRequest, _ *types.APISchema) (types.APIObjectList, error) {
 	resp := types.APIObjectList{}
-	for _, channel := range c.config.Config().Channels {
+	for _, channel := range c.config.ChannelsConfig().Channels {
 		resp.Objects = append(resp.Objects, types.APIObject{
 			Type:   "channel",
 			ID:     channel.Name,
