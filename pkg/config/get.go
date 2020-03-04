@@ -74,9 +74,26 @@ func GetChannelsConfig(ctx context.Context, content []byte, subKey string) (*mod
 	return config, convert.ToObj(data, config)
 }
 
-func GetReleasesConfig(content []byte, channelServerVersion string) (*model.ReleasesConfig, error) {
-	var allReleases model.ReleasesConfig
-	var availableReleases model.ReleasesConfig
+func GetReleasesConfig(content []byte, channelServerVersion, subKey string) (*model.ReleasesConfig, error) {
+	var (
+		allReleases       model.ReleasesConfig
+		availableReleases model.ReleasesConfig
+		data              map[string]interface{}
+	)
+
+	if subKey == "" {
+		if err := yaml.Unmarshal(content, &allReleases); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := yaml.Unmarshal(content, &data); err != nil {
+			return nil, err
+		}
+		data, _ = data[subKey].(map[string]interface{})
+		if err := convert.ToObj(data, &allReleases); err != nil {
+			return nil, err
+		}
+	}
 
 	if err := yaml.Unmarshal(content, &allReleases); err != nil {
 		return nil, err
