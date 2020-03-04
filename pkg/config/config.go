@@ -53,7 +53,7 @@ func (c *Config) loadConfig(ctx context.Context, subKey string, channelServerVer
 		return index, err
 	}
 
-	releases, err := GetReleasesConfig(content, channelServerVersion)
+	releases, err := GetReleasesConfig(content, channelServerVersion, subKey)
 	if err != nil {
 		return index, err
 	}
