@@ -142,7 +142,7 @@ func GetGHReleases(ctx context.Context, client *github.Client, owner, repo strin
 			return nil, err
 		}
 		for _, release := range releases {
-			if release.TagName != nil {
+			if release.GetTagName() != "" && !release.GetPrerelease() {
 				allReleases = append(allReleases, *release.TagName)
 			}
 		}
