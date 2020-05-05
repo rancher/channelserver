@@ -3,14 +3,14 @@ This project is a micro-service for exposing multiple release channels for a sof
 
 It expands on the `/releases/latest` concept by allowing you to create multiple release channels, each with their own URL that will redirect to the latest release for that channel.
 
-A channel's latest release can be configured by [explicitly pinning it to a version](https://github.com/rancher/channelserver/blob/439813cefa7a0bd048052bcabc7b1c6ad796e97a/channels.yaml#L4) or by [selecting a set of releases via regular expression](https://github.com/rancher/channelserver/blob/439813cefa7a0bd048052bcabc7b1c6ad796e97a/channels.yaml#L11) (in which case the most recently release matching the regex will be resolved as the latest release). For more exmples, see the [sample config](https://github.com/rancher/channelserver/blob/master/channels.yaml).
+A channel's latest release can be configured by [explicitly pinning it to a version](https://github.com/rancher/channelserver/blob/439813cefa7a0bd048052bcabc7b1c6ad796e97a/channels.yaml#L4) or by [selecting a set of releases via regular expression](https://github.com/rancher/channelserver/blob/439813cefa7a0bd048052bcabc7b1c6ad796e97a/channels.yaml#L11) (in which case the most recently release matching the regex will be resolved as the latest release). For more examples, see the [sample config](https://github.com/rancher/channelserver/blob/master/channels.yaml).
 
-The primary usecase for this project is currently Rancher's [system-upgrade-controller](https://github.com/rancher/system-upgrade-controller), which is used for automating upgrades of k3s and k3os. In the system-upgrade-controller, a user could specify an channel exposed by this sevice as the URL in the plan.spec.channel field.
+The primary usecase for this project is currently Rancher's [system-upgrade-controller](https://github.com/rancher/system-upgrade-controller), which is used for automating upgrades of k3s and k3os. In the system-upgrade-controller, a user can specify a channel exposed by this sevice as the URL in the plan.spec.channel field.
 
-This service in proudction for k3s here: https://update.k3s.io/v1-release/channels, which is driven by this config: https://github.com/rancher/k3s/blob/master/channel.yaml. Each channel's `self` link is the URL that will resolve to the latest GitHub release page for that channel.
+This service is in proudction for k3s here: https://update.k3s.io/v1-release/channels, which is driven by this config: https://github.com/rancher/k3s/blob/master/channel.yaml. Each channel's `self` link is the URL that will resolve to the latest GitHub release page for that channel.
 
 ## License
-Copyright (c) 2019 [Rancher Labs, Inc.](http://rancher.com)
+Copyright (c) 2020 [Rancher Labs, Inc.](http://rancher.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
