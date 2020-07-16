@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -17,7 +18,7 @@ import (
 	"github.com/rancher/steve/pkg/schemaserver/types"
 )
 
-func ListenAndServe(ctx context.Context, address string, config *config.Config) error {
+func ListenAndServe(ctx context.Context, address string, config *config.Config, pathPrefix string) error {
 	server := server.DefaultAPIServer()
 	server.Schemas.MustImportAndCustomize(model.Channel{}, func(schema *types.APISchema) {
 		schema.Store = store.New(config)
@@ -28,13 +29,16 @@ func ListenAndServe(ctx context.Context, address string, config *config.Config) 
 		schema.Store = release.New(config)
 		schema.CollectionMethods = []string{http.MethodGet}
 	})
-	apiroot.Register(server.Schemas, []string{"v1-release"}, nil)
 
+	pathPrefix = strings.TrimPrefix(pathPrefix, "/")
+	pathPrefix = strings.TrimSuffix(pathPrefix, "/")
+
+	apiroot.Register(server.Schemas, []string{pathPrefix}, nil)
 	router := mux.NewRouter()
-	router.MatcherFunc(setType("apiRoot")).Path("/").Handler(server)
-	router.MatcherFunc(setType("apiRoot")).Path("/{name}").Handler(server)
-	router.Path("/{prefix:v1-release}/{type}").Handler(server)
-	router.Path("/{prefix:v1-release}/{type}/{name}").Handler(server)
+	router.MatcherFunc(setType("apiRoot", pathPrefix)).Path("/").Handler(server)
+	router.MatcherFunc(setType("apiRoot", pathPrefix)).Path("/{name}").Handler(server)
+	router.Path("/{prefix:" + pathPrefix + "}/{type}").Handler(server)
+	router.Path("/{prefix:" + pathPrefix + "}/{type}/{name}").Handler(server)
 
 	next := handlers.LoggingHandler(os.Stdout, router)
 	handler := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
@@ -48,13 +52,13 @@ func ListenAndServe(ctx context.Context, address string, config *config.Config) 
 	return http.ListenAndServe(address, handler)
 }
 
-func setType(t string) mux.MatcherFunc {
+func setType(t string, pathPrefix string) mux.MatcherFunc {
 	return func(request *http.Request, match *mux.RouteMatch) bool {
 		if match.Vars == nil {
 			match.Vars = map[string]string{}
 		}
 		match.Vars["type"] = t
-		match.Vars["prefix"] = "v1-release"
+		match.Vars["prefix"] = pathPrefix
 		return true
 	}
 }
