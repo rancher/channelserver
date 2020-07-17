@@ -24,6 +24,7 @@ var (
 	ListenAddress        string
 	SubKey               string
 	ChannelServerVersion string
+	PathPrefix           string
 )
 
 func main() {
@@ -58,6 +59,12 @@ func main() {
 			EnvVar:      "CHANNEL_SERVER_VERSION",
 			Destination: &ChannelServerVersion,
 		},
+		cli.StringFlag{
+			Name:        "path-prefix",
+			EnvVar:      "PATH_PREFIX",
+			Value:       "v1-release",
+			Destination: &PathPrefix,
+		},
 	}
 	app.Action = run
 
@@ -80,5 +87,5 @@ func run(c *cli.Context) error {
 		return err
 	}
 
-	return server.ListenAndServe(ctx, ListenAddress, config)
+	return server.ListenAndServe(ctx, ListenAddress, config, PathPrefix)
 }
