@@ -11,20 +11,18 @@ import (
 	"github.com/rancher/channelserver/pkg/server"
 	"github.com/rancher/wrangler/pkg/signals"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 var (
-	Version   = "v0.0.0-dev"
-	GitCommit = "HEAD"
-	URLs      = cli.StringSlice{
-		"channels.yaml",
-	}
+	Version              = "v0.0.0-dev"
+	GitCommit            = "HEAD"
+	URLs                 = cli.NewStringSlice("channels.yaml")
 	RefreshInterval      string
 	ListenAddress        string
-	SubKey               string
+	SubKeys              cli.StringSlice
 	ChannelServerVersion string
-	PathPrefix           string
+	PathPrefix           cli.StringSlice
 )
 
 func main() {
@@ -32,37 +30,37 @@ func main() {
 	app.Name = "Channel Server"
 	app.Version = fmt.Sprintf("%s (%s)", Version, GitCommit)
 	app.Flags = []cli.Flag{
-		cli.StringSliceFlag{
-			Name:   "url",
-			EnvVar: "URL",
-			Value:  &URLs,
+		&cli.StringSliceFlag{
+			Name:    "url",
+			EnvVars: []string{"URL"},
+			Value:   URLs,
 		},
-		cli.StringFlag{
+		&cli.StringSliceFlag{
 			Name:        "config-key",
-			EnvVar:      "SUBKEY",
-			Destination: &SubKey,
+			EnvVars:     []string{"SUBKEY"},
+			Destination: &SubKeys,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:        "refresh-interval",
-			EnvVar:      "REFRESH_INTERVAL",
+			EnvVars:     []string{"REFRESH_INTERVAL"},
 			Value:       "15m",
 			Destination: &RefreshInterval,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:        "listen-address",
-			EnvVar:      "LISTEN_ADDRESS",
+			EnvVars:     []string{"LISTEN_ADDRESS"},
 			Value:       "0.0.0.0:8080",
 			Destination: &ListenAddress,
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:        "channel-server-version",
-			EnvVar:      "CHANNEL_SERVER_VERSION",
+			EnvVars:     []string{"CHANNEL_SERVER_VERSION"},
 			Destination: &ChannelServerVersion,
 		},
-		cli.StringFlag{
+		&cli.StringSliceFlag{
 			Name:        "path-prefix",
-			EnvVar:      "PATH_PREFIX",
-			Value:       "v1-release",
+			EnvVars:     []string{"PATH_PREFIX"},
+			Value:       cli.NewStringSlice("v1-release"),
 			Destination: &PathPrefix,
 		},
 	}
@@ -81,11 +79,17 @@ func run(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to parse %s", RefreshInterval)
 	}
-
-	config, err := config.NewConfig(ctx, SubKey, intval, ChannelServerVersion, URLs...)
-	if err != nil {
-		return err
+	if len(SubKeys.Value()) != len(PathPrefix.Value()) {
+		return errors.Errorf("keys-prefix lengths are not equal %s %s %s ", PathPrefix.Value(), SubKeys.Value(), ListenAddress)
 	}
+	configs := map[string]*config.Config{}
+	for index, subkey := range SubKeys.Value() {
+		config, err := config.NewConfig(ctx, subkey, intval, ChannelServerVersion, URLs.Value())
+		configs[PathPrefix.Value()[index]] = config
+		if err != nil {
+			return err
+		}
 
-	return server.ListenAndServe(ctx, ListenAddress, config, PathPrefix)
+	}
+	return server.ListenAndServe(ctx, ListenAddress, configs)
 }
