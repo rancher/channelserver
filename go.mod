@@ -12,6 +12,6 @@ require (
 	github.com/rancher/steve v0.0.0-20200220230643-5b94b82bc6c8
 	github.com/rancher/wrangler v0.4.2-0.20200215064225-8abf292acf7b
 	github.com/sirupsen/logrus v1.4.2
-	github.com/urfave/cli v1.22.2
+	github.com/urfave/cli/v2 v2.2.0
 	sigs.k8s.io/yaml v1.1.0
 )
