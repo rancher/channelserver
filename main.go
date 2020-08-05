@@ -85,11 +85,10 @@ func run(c *cli.Context) error {
 	configs := map[string]*config.Config{}
 	for index, subkey := range SubKeys.Value() {
 		config, err := config.NewConfig(ctx, subkey, intval, ChannelServerVersion, URLs.Value())
-		configs[PathPrefix.Value()[index]] = config
 		if err != nil {
 			return err
 		}
-
+		configs[PathPrefix.Value()[index]] = config
 	}
 	return server.ListenAndServe(ctx, ListenAddress, configs)
 }

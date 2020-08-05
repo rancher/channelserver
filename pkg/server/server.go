@@ -7,8 +7,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/rancher/steve/pkg/schemaserver/store/apiroot"
-
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/rancher/channelserver/pkg/config"
@@ -16,12 +14,12 @@ import (
 	"github.com/rancher/channelserver/pkg/server/store"
 	"github.com/rancher/channelserver/pkg/server/store/release"
 	"github.com/rancher/steve/pkg/schemaserver/server"
+	"github.com/rancher/steve/pkg/schemaserver/store/apiroot"
 	"github.com/rancher/steve/pkg/schemaserver/types"
 )
 
 func ListenAndServe(ctx context.Context, address string, configs map[string]*config.Config) error {
 	router := mux.NewRouter()
-
 	for prefix, config := range configs {
 		server := server.DefaultAPIServer()
 		server.Schemas.MustImportAndCustomize(model.Channel{}, func(schema *types.APISchema) {
@@ -49,8 +47,8 @@ func ListenAndServe(ctx context.Context, address string, configs map[string]*con
 		next.ServeHTTP(rw, req)
 	})
 	return http.ListenAndServe(address, handler)
-
 }
+
 func setType(t string, pathPrefix string) mux.MatcherFunc {
 	return func(request *http.Request, match *mux.RouteMatch) bool {
 		if match.Vars == nil {
