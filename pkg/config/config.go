@@ -22,7 +22,8 @@ type Config struct {
 	releasesConfig *model.ReleasesConfig
 }
 
-func NewConfig(ctx context.Context, subKey string, refresh time.Duration, channelServerVersion string, urls ...string) (*Config, error) {
+func NewConfig(ctx context.Context, subKey string, refresh time.Duration, channelServerVersion string, urls []string) (*Config, error) {
+
 	c := &Config{}
 	if _, err := c.loadConfig(ctx, subKey, channelServerVersion, urls...); err != nil {
 		return nil, err

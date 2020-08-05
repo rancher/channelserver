@@ -18,28 +18,26 @@ import (
 	"github.com/rancher/steve/pkg/schemaserver/types"
 )
 
-func ListenAndServe(ctx context.Context, address string, config *config.Config, pathPrefix string) error {
-	server := server.DefaultAPIServer()
-	server.Schemas.MustImportAndCustomize(model.Channel{}, func(schema *types.APISchema) {
-		schema.Store = store.New(config)
-		schema.CollectionMethods = []string{http.MethodGet}
-		schema.ResourceMethods = []string{http.MethodGet}
-	})
-	server.Schemas.MustImportAndCustomize(model.Release{}, func(schema *types.APISchema) {
-		schema.Store = release.New(config)
-		schema.CollectionMethods = []string{http.MethodGet}
-	})
-
-	pathPrefix = strings.TrimPrefix(pathPrefix, "/")
-	pathPrefix = strings.TrimSuffix(pathPrefix, "/")
-
-	apiroot.Register(server.Schemas, []string{pathPrefix}, nil)
+func ListenAndServe(ctx context.Context, address string, configs map[string]*config.Config) error {
 	router := mux.NewRouter()
-	router.MatcherFunc(setType("apiRoot", pathPrefix)).Path("/").Handler(server)
-	router.MatcherFunc(setType("apiRoot", pathPrefix)).Path("/{name}").Handler(server)
-	router.Path("/{prefix:" + pathPrefix + "}/{type}").Handler(server)
-	router.Path("/{prefix:" + pathPrefix + "}/{type}/{name}").Handler(server)
-
+	for prefix, config := range configs {
+		server := server.DefaultAPIServer()
+		server.Schemas.MustImportAndCustomize(model.Channel{}, func(schema *types.APISchema) {
+			schema.Store = store.New(config)
+			schema.CollectionMethods = []string{http.MethodGet}
+			schema.ResourceMethods = []string{http.MethodGet}
+		})
+		server.Schemas.MustImportAndCustomize(model.Release{}, func(schema *types.APISchema) {
+			schema.Store = release.New(config)
+			schema.CollectionMethods = []string{http.MethodGet}
+		})
+		prefix = strings.Trim(prefix, "/")
+		apiroot.Register(server.Schemas, []string{prefix}, nil)
+		router.MatcherFunc(setType("apiRoot", prefix)).Path("/").Handler(server)
+		router.MatcherFunc(setType("apiRoot", prefix)).Path("/{name}").Handler(server)
+		router.Path("/{prefix:" + prefix + "}/{type}").Handler(server)
+		router.Path("/{prefix:" + prefix + "}/{type}/{name}").Handler(server)
+	}
 	next := handlers.LoggingHandler(os.Stdout, router)
 	handler := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		user := req.Header.Get("X-SUC-Cluster-ID")
@@ -48,7 +46,6 @@ func ListenAndServe(ctx context.Context, address string, config *config.Config, 
 		}
 		next.ServeHTTP(rw, req)
 	})
-
 	return http.ListenAndServe(address, handler)
 }
 

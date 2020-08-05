@@ -137,8 +137,8 @@ github.com/ulikunitz/xz
 github.com/ulikunitz/xz/internal/hash
 github.com/ulikunitz/xz/internal/xlog
 github.com/ulikunitz/xz/lzma
-# github.com/urfave/cli v1.22.2
-github.com/urfave/cli
+# github.com/urfave/cli/v2 v2.2.0
+github.com/urfave/cli/v2
 # go.opencensus.io v0.22.0
 go.opencensus.io
 go.opencensus.io/internal
