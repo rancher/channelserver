@@ -82,12 +82,17 @@ func run(c *cli.Context) error {
 	if len(SubKeys.Value()) != len(PathPrefix.Value()) {
 		return errors.Errorf("keys-prefix lengths are not equal %s %s %s ", PathPrefix.Value(), SubKeys.Value(), ListenAddress)
 	}
-	configs := map[string]*config.Config{}
+
+	var (
+		configs = map[string]*config.Config{}
+		sources []config.Source
+	)
+
+	for _, url := range URLs.Value() {
+		sources = append(sources, config.StringSource(url))
+	}
 	for index, subkey := range SubKeys.Value() {
-		config, err := config.NewConfig(ctx, subkey, intval, ChannelServerVersion, URLs.Value())
-		if err != nil {
-			return err
-		}
+		config := config.NewConfig(ctx, subkey, &config.DurationWait{Duration: intval}, ChannelServerVersion, sources)
 		configs[PathPrefix.Value()[index]] = config
 	}
 	return server.ListenAndServe(ctx, ListenAddress, configs)

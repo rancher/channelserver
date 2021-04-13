@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/go-github/v29/github"
 	"github.com/rancher/channelserver/pkg/model"
-	"github.com/rancher/wrangler/pkg/ticker"
 	"github.com/sirupsen/logrus"
 )
 
@@ -22,15 +21,43 @@ type Config struct {
 	releasesConfig *model.ReleasesConfig
 }
 
-func NewConfig(ctx context.Context, subKey string, refresh time.Duration, channelServerVersion string, urls []string) (*Config, error) {
+type Wait interface {
+	Wait(ctx context.Context) bool
+}
 
-	c := &Config{}
-	if _, err := c.loadConfig(ctx, subKey, channelServerVersion, urls...); err != nil {
-		return nil, err
+type Source interface {
+	URL() string
+}
+
+type DurationWait struct {
+	Duration time.Duration
+}
+
+func (d *DurationWait) Wait(ctx context.Context) bool {
+	select {
+	case <-ctx.Done():
+		return false
+	case <-time.After(d.Duration):
+		return true
+	}
+}
+
+type StringSource string
+
+func (s StringSource) URL() string {
+	return string(s)
+}
+
+func NewConfig(ctx context.Context, subKey string, wait Wait, channelServerVersion string, urls []Source) *Config {
+	c := &Config{
+		channelsConfig: &model.ChannelsConfig{},
+		releasesConfig: &model.ReleasesConfig{},
 	}
 
+	_, _ = c.loadConfig(ctx, subKey, channelServerVersion, urls...)
+
 	go func() {
-		for range ticker.Context(ctx, refresh) {
+		for wait.Wait(ctx) {
 			if index, err := c.loadConfig(ctx, subKey, channelServerVersion, urls...); err != nil {
 				logrus.Errorf("failed to reload configuration from %s: %v", urls, err)
 			} else {
@@ -40,10 +67,10 @@ func NewConfig(ctx context.Context, subKey string, refresh time.Duration, channe
 		}
 	}()
 
-	return c, nil
+	return c
 }
 
-func (c *Config) loadConfig(ctx context.Context, subKey string, channelServerVersion string, urls ...string) (int, error) {
+func (c *Config) loadConfig(ctx context.Context, subKey string, channelServerVersion string, urls ...Source) (int, error) {
 	content, index, err := getURLs(ctx, urls...)
 	if err != nil {
 		return index, err
