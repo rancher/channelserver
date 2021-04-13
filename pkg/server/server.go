@@ -9,16 +9,20 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/rancher/apiserver/pkg/server"
+	"github.com/rancher/apiserver/pkg/store/apiroot"
+	"github.com/rancher/apiserver/pkg/types"
 	"github.com/rancher/channelserver/pkg/config"
 	"github.com/rancher/channelserver/pkg/model"
 	"github.com/rancher/channelserver/pkg/server/store"
 	"github.com/rancher/channelserver/pkg/server/store/release"
-	"github.com/rancher/steve/pkg/schemaserver/server"
-	"github.com/rancher/steve/pkg/schemaserver/store/apiroot"
-	"github.com/rancher/steve/pkg/schemaserver/types"
 )
 
 func ListenAndServe(ctx context.Context, address string, configs map[string]*config.Config) error {
+	return http.ListenAndServe(address, NewHandler(configs))
+}
+
+func NewHandler(configs map[string]*config.Config) http.Handler {
 	router := mux.NewRouter()
 	for prefix, config := range configs {
 		server := server.DefaultAPIServer()
@@ -32,7 +36,7 @@ func ListenAndServe(ctx context.Context, address string, configs map[string]*con
 			schema.CollectionMethods = []string{http.MethodGet}
 		})
 		prefix = strings.Trim(prefix, "/")
-		apiroot.Register(server.Schemas, []string{prefix}, nil)
+		apiroot.Register(server.Schemas, []string{prefix})
 		router.MatcherFunc(setType("apiRoot", prefix)).Path("/").Handler(server)
 		router.MatcherFunc(setType("apiRoot", prefix)).Path("/{name}").Handler(server)
 		router.Path("/{prefix:" + prefix + "}/{type}").Handler(server)
@@ -46,7 +50,7 @@ func ListenAndServe(ctx context.Context, address string, configs map[string]*con
 		}
 		next.ServeHTTP(rw, req)
 	})
-	return http.ListenAndServe(address, handler)
+	return handler
 }
 
 func setType(t string, pathPrefix string) mux.MatcherFunc {

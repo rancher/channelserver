@@ -1,9 +1,9 @@
 package release
 
 import (
+	"github.com/rancher/apiserver/pkg/store/empty"
+	"github.com/rancher/apiserver/pkg/types"
 	"github.com/rancher/channelserver/pkg/config"
-	"github.com/rancher/steve/pkg/schemaserver/store/empty"
-	"github.com/rancher/steve/pkg/schemaserver/types"
 )
 
 type Store struct {
