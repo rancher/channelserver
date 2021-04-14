@@ -1,5 +1,7 @@
 package model
 
+import "github.com/rancher/wrangler/pkg/schemas"
+
 type ChannelsConfig struct {
 	Channels     []Channel `json:"channels,omitempty"`
 	GitHub       *GitHub   `json:"github,omitempty"`
@@ -18,9 +20,12 @@ type Channel struct {
 }
 
 type Release struct {
-	Version                 string `json:"version,omitempty"`
-	ChannelServerMinVersion string `json:"minChannelServerVersion,omitempty"`
-	ChannelServerMaxVersion string `json:"maxChannelServerVersion,omitempty"`
+	Version                 string                   `json:"version,omitempty"`
+	ChannelServerMinVersion string                   `json:"minChannelServerVersion,omitempty"`
+	ChannelServerMaxVersion string                   `json:"maxChannelServerVersion,omitempty"`
+	ServerArgs              map[string]schemas.Field `json:"serverArgs,omitempty"`
+	AgentArgs               map[string]schemas.Field `json:"agentArgs,omitempty"`
+	CNIValues               map[string]string        `json:"cniValues,omitempty"`
 }
 
 type GitHub struct {

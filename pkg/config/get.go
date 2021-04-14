@@ -4,17 +4,16 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"os"
+	"net/http"
 
 	"github.com/blang/semver"
 	"github.com/google/go-github/v29/github"
-	"github.com/hashicorp/go-getter"
 	"github.com/rancher/channelserver/pkg/model"
 	"github.com/rancher/wrangler/pkg/data/convert"
 	"sigs.k8s.io/yaml"
 )
 
-func getURLs(ctx context.Context, urls ...string) ([]byte, int, error) {
+func getURLs(ctx context.Context, urls ...Source) ([]byte, int, error) {
 	var (
 		bytes []byte
 		err   error
@@ -31,27 +30,24 @@ func getURLs(ctx context.Context, urls ...string) ([]byte, int, error) {
 	return bytes, index, err
 }
 
-func get(ctx context.Context, url string) ([]byte, error) {
-	content, err := ioutil.ReadFile(url)
+func get(ctx context.Context, url Source) ([]byte, error) {
+	content, err := ioutil.ReadFile(url.URL())
 	if err == nil {
 		return content, nil
 	}
 
-	tmp, err := ioutil.TempFile("", "channel-config*.yaml")
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		tmp.Close()
-		os.Remove(tmp.Name())
-	}()
-
-	err = getter.GetFile(tmp.Name(), url, getter.WithContext(ctx))
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url.URL(), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	return ioutil.ReadAll(tmp)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return ioutil.ReadAll(resp.Body)
 }
 
 func GetChannelsConfig(ctx context.Context, content []byte, subKey string) (*model.ChannelsConfig, error) {
@@ -142,7 +138,7 @@ func GetGHReleases(ctx context.Context, client *github.Client, owner, repo strin
 			return nil, err
 		}
 		for _, release := range releases {
-			if release.TagName != nil {
+			if release.GetTagName() != "" && !release.GetPrerelease() {
 				allReleases = append(allReleases, *release.TagName)
 			}
 		}

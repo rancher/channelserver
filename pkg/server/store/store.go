@@ -3,9 +3,9 @@ package store
 import (
 	"net/http"
 
+	"github.com/rancher/apiserver/pkg/store/empty"
+	"github.com/rancher/apiserver/pkg/types"
 	"github.com/rancher/channelserver/pkg/config"
-	"github.com/rancher/steve/pkg/schemaserver/store/empty"
-	"github.com/rancher/steve/pkg/schemaserver/types"
 	"github.com/rancher/wrangler/pkg/schemas/validation"
 )
 
