@@ -25,7 +25,12 @@ type Release struct {
 	ChannelServerMaxVersion string                   `json:"maxChannelServerVersion,omitempty"`
 	ServerArgs              map[string]schemas.Field `json:"serverArgs,omitempty"`
 	AgentArgs               map[string]schemas.Field `json:"agentArgs,omitempty"`
-	ChartValues             map[string]string        `json:"chartValues,omitempty"`
+	Charts                  map[string]Chart         `json:"charts,omitempty"`
+}
+
+type Chart struct {
+	Repo    string `json:"repo,omitempty"`
+	Version string `json:"version,omitempty"`
 }
 
 type GitHub struct {
