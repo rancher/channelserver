@@ -2,5 +2,6 @@
 /.cache
 /bin
 /dist
+/channelserver
 *.swp
 .idea

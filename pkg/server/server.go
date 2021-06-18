@@ -19,7 +19,18 @@ import (
 )
 
 func ListenAndServe(ctx context.Context, address string, configs map[string]*config.Config) error {
-	return http.ListenAndServe(address, NewHandler(configs))
+	h := NewHandler(configs)
+
+	next := handlers.LoggingHandler(os.Stdout, h)
+	handler := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		user := req.Header.Get("X-SUC-Cluster-ID")
+		if user != "" && req.URL != nil {
+			req.URL.User = url.User(user)
+		}
+		next.ServeHTTP(rw, req)
+	})
+
+	return http.ListenAndServe(address, handler)
 }
 
 func NewHandler(configs map[string]*config.Config) http.Handler {
@@ -42,15 +53,7 @@ func NewHandler(configs map[string]*config.Config) http.Handler {
 		router.Path("/{prefix:" + prefix + "}/{type}").Handler(server)
 		router.Path("/{prefix:" + prefix + "}/{type}/{name}").Handler(server)
 	}
-	next := handlers.LoggingHandler(os.Stdout, router)
-	handler := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		user := req.Header.Get("X-SUC-Cluster-ID")
-		if user != "" && req.URL != nil {
-			req.URL.User = url.User(user)
-		}
-		next.ServeHTTP(rw, req)
-	})
-	return handler
+	return router
 }
 
 func setType(t string, pathPrefix string) mux.MatcherFunc {
