@@ -91,10 +91,6 @@ func GetReleasesConfig(content []byte, channelServerVersion, subKey string) (*mo
 		}
 	}
 
-	if err := yaml.Unmarshal(content, &allReleases); err != nil {
-		return nil, err
-	}
-
 	// no server version specified, show all releases
 	if channelServerVersion == "" {
 		return &allReleases, nil
