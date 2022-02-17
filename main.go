@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"time"
@@ -73,7 +72,7 @@ func main() {
 
 func run(c *cli.Context) error {
 	logrus.SetOutput(os.Stderr)
-	ctx := signals.SetupSignalHandler(context.Background())
+	ctx := signals.SetupSignalContext()
 
 	intval, err := time.ParseDuration(RefreshInterval)
 	if err != nil {
