@@ -11,7 +11,7 @@ require (
 	github.com/gorilla/mux v1.7.3
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/apiserver v0.0.0-20201023000256-1a0a904f9197
-	github.com/rancher/wrangler v0.8.0
+	github.com/rancher/wrangler v0.8.11-0.20220120160420-18c996a8e956
 	github.com/sirupsen/logrus v1.6.0
 	github.com/urfave/cli/v2 v2.2.0
 	sigs.k8s.io/yaml v1.2.0
