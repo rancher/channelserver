@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"sync"
 	"time"
@@ -14,11 +15,12 @@ import (
 type Config struct {
 	sync.Mutex
 
-	url            string
-	redirect       *url.URL
-	gh             *github.Client
-	channelsConfig *model.ChannelsConfig
-	releasesConfig *model.ReleasesConfig
+	url               string
+	redirect          *url.URL
+	gh                *github.Client
+	channelsConfig    *model.ChannelsConfig
+	releasesConfig    *model.ReleasesConfig
+	appDefaultsConfig *model.AppDefaultsConfig
 }
 
 type Wait interface {
@@ -48,21 +50,22 @@ func (s StringSource) URL() string {
 	return string(s)
 }
 
-func NewConfig(ctx context.Context, subKey string, wait Wait, channelServerVersion string, urls []Source) *Config {
+func NewConfig(ctx context.Context, subKey string, wait Wait, channelServerVersion string, appName string, urls []Source) *Config {
 	c := &Config{
-		channelsConfig: &model.ChannelsConfig{},
-		releasesConfig: &model.ReleasesConfig{},
+		channelsConfig:    &model.ChannelsConfig{},
+		releasesConfig:    &model.ReleasesConfig{},
+		appDefaultsConfig: &model.AppDefaultsConfig{},
 	}
 
-	_, _ = c.loadConfig(ctx, subKey, channelServerVersion, urls...)
+	_, _ = c.loadConfig(ctx, subKey, channelServerVersion, appName, urls...)
 
 	go func() {
 		for wait.Wait(ctx) {
-			if index, err := c.loadConfig(ctx, subKey, channelServerVersion, urls...); err != nil {
-				logrus.Errorf("failed to reload configuration from %s: %v", urls, err)
+			if index, err := c.loadConfig(ctx, subKey, channelServerVersion, appName, urls...); err != nil {
+				logrus.Errorf("failed to reload configuration from %s: %v", urls[index].URL(), err)
 			} else {
 				urls = urls[:index+1]
-				logrus.Infof("Loaded configuration from %s in %v", urls[index], urls)
+				logrus.Infof("Loaded configuration from %s in %v", urls[index].URL(), urls)
 			}
 		}
 	}()
@@ -70,23 +73,28 @@ func NewConfig(ctx context.Context, subKey string, wait Wait, channelServerVersi
 	return c
 }
 
-func (c *Config) loadConfig(ctx context.Context, subKey string, channelServerVersion string, urls ...Source) (int, error) {
+func (c *Config) loadConfig(ctx context.Context, subKey string, channelServerVersion string, appName string, urls ...Source) (int, error) {
 	content, index, err := getURLs(ctx, urls...)
 	if err != nil {
-		return index, err
+		return index, fmt.Errorf("failed to get content from url %s: %v", urls[index].URL(), err)
 	}
 
 	config, err := GetChannelsConfig(ctx, content, subKey)
 	if err != nil {
-		return index, err
+		return index, fmt.Errorf("failed to get channel config: %v", err)
 	}
 
 	releases, err := GetReleasesConfig(content, channelServerVersion, subKey)
 	if err != nil {
-		return index, err
+		return index, fmt.Errorf("failed to get release config: %v", err)
 	}
 
-	return index, c.setConfig(ctx, channelServerVersion, config, releases)
+	appDefaultsConfig, err := GetAppDefaultsConfig(content, subKey, appName)
+	if err != nil {
+		return index, fmt.Errorf("failed to get app default config: %v", err)
+	}
+
+	return index, c.setConfig(ctx, channelServerVersion, config, releases, appDefaultsConfig)
 }
 
 func (c *Config) ghClient(config *model.ChannelsConfig) (*github.Client, error) {
@@ -103,7 +111,7 @@ func (c *Config) ghClient(config *model.ChannelsConfig) (*github.Client, error) 
 	return c.gh, nil
 }
 
-func (c *Config) setConfig(ctx context.Context, channelServerVersion string, config *model.ChannelsConfig, releases *model.ReleasesConfig) error {
+func (c *Config) setConfig(ctx context.Context, channelServerVersion string, config *model.ChannelsConfig, releases *model.ReleasesConfig, appDefaultsConfig *model.AppDefaultsConfig) error {
 	gh, err := c.ghClient(config)
 	if err != nil {
 		return err
@@ -132,6 +140,7 @@ func (c *Config) setConfig(ctx context.Context, channelServerVersion string, con
 	c.channelsConfig = config
 	c.redirect = redirect
 	c.releasesConfig = releases
+	c.appDefaultsConfig = appDefaultsConfig
 	if config.GitHub != nil {
 		c.url = config.GitHub.APIURL
 	}
@@ -168,6 +177,12 @@ func (c *Config) ReleasesConfig() *model.ReleasesConfig {
 	c.Lock()
 	defer c.Unlock()
 	return c.releasesConfig
+}
+
+func (c *Config) AppDefaultsConfig() *model.AppDefaultsConfig {
+	c.Lock()
+	defer c.Unlock()
+	return c.appDefaultsConfig
 }
 
 func (c *Config) Redirect(id string) (string, error) {

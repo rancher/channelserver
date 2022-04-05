@@ -47,6 +47,10 @@ func get(ctx context.Context, url Source) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("status %v", resp.Status)
+	}
+
 	return ioutil.ReadAll(resp.Body)
 }
 
@@ -145,4 +149,41 @@ func GetGHReleases(ctx context.Context, client *github.Client, owner, repo strin
 	}
 
 	return allReleases, nil
+}
+
+func GetAppDefaultsConfig(content []byte, subKey, appName string) (*model.AppDefaultsConfig, error) {
+	var (
+		data             map[string]interface{}
+		allConfigs       model.AppDefaultsConfig
+		availableConfigs model.AppDefaultsConfig
+	)
+
+	if subKey == "" {
+		if err := yaml.Unmarshal(content, &allConfigs); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := yaml.Unmarshal(content, &data); err != nil {
+			return nil, err
+		}
+		subData, ok := data[subKey].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("content at key %s expected to be map[string]interface{}, found %T instead", subKey, data[subKey])
+		}
+		if err := convert.ToObj(subData, &allConfigs); err != nil {
+			return nil, err
+		}
+	}
+
+	// no app name is specified, return all AppDefaultsConfigs
+	if appName == "" {
+		return &allConfigs, nil
+	}
+	for _, appDefault := range allConfigs.AppDefaults {
+		if appDefault.AppName == appName {
+			availableConfigs.AppDefaults = append(availableConfigs.AppDefaults, appDefault)
+			break
+		}
+	}
+	return &availableConfigs, nil
 }

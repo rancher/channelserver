@@ -1,35 +1,49 @@
 # Example channels config
-channels:
-- name: stable
-  latest: v1.17.2+k3s1
-- name: latest
-  latestRegexp: .*
-  excludeRegexp: rc
-- name: testing
-  latestRegexp: .*
-- name: v1.16
-  latestRegexp: v1\.16\..*
-  excludeRegexp: rc
-- name: v1.16-testing
-  latestRegexp: v1\.16\.*
-- name: v1.17
-  latestRegexp: v1\.17\..*
-  excludeRegexp: rc
-- name: v1.17-testing
-  latestRegexp: v1\.17\..*
-- name: v1.0
-  latestRegexp: v1\.0\..*
-  excludeRegexp: rc
-- name: v1.0-testing
-  latestRegexp: v1\.0\..*
-releases:
-- version: v1.15.3+k3s2
-  minChannelServerVersion: v2.3.0
-  maxChannelServerVersion: v2.3.5
-- version: v1.17.4+k3s1
-  minChannelServerVersion: v2.4.0
-  maxChannelServerVersion: v2.4.5
-github:
-  owner: rancher
-  repo: k3s
-redirectBase: https://github.com/rancher/k3s/releases/tag/
+k3s:
+  channels:
+  - name: stable
+    latest: v1.17.2+k3s1
+  - name: latest
+    latestRegexp: .*
+    excludeRegexp: rc
+  - name: testing
+    latestRegexp: .*
+  - name: v1.16
+    latestRegexp: v1\.16\..*
+    excludeRegexp: rc
+  - name: v1.16-testing
+    latestRegexp: v1\.16\.*
+  - name: v1.17
+    latestRegexp: v1\.17\..*
+    excludeRegexp: rc
+  - name: v1.17-testing
+    latestRegexp: v1\.17\..*
+  - name: v1.0
+    latestRegexp: v1\.0\..*
+    excludeRegexp: rc
+  - name: v1.0-testing
+    latestRegexp: v1\.0\..*
+  releases:
+  - version: v1.15.3+k3s2
+    minChannelServerVersion: v2.3.0
+    maxChannelServerVersion: v2.3.5
+  - version: v1.17.4+k3s1
+    minChannelServerVersion: v2.4.0
+    maxChannelServerVersion: v2.4.5
+  appDefaults:
+    - appName: rancher
+      defaults:
+        - appVersion: '> 2.6.2-0 < 2.6.3-0'
+          defaultVersion: '1.20.x'
+        - appVersion: '> 2.6.2-0 < 2.6.4-0'
+          defaultVersion: '1.21.x'
+        - appVersion: '> 2.6.4-0'
+          defaultVersion: '1.22.x'
+    - appName: anotherApp
+      defaults:
+        - appVersion: '1.2.x'
+          defaultVersion: '1.19.5'
+  github:
+    owner: rancher
+    repo: k3s
+  redirectBase: https://github.com/rancher/k3s/releases/tag/
