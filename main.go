@@ -22,6 +22,7 @@ var (
 	SubKeys              cli.StringSlice
 	ChannelServerVersion string
 	PathPrefix           cli.StringSlice
+	AppName              string
 )
 
 func main() {
@@ -55,6 +56,12 @@ func main() {
 			Name:        "channel-server-version",
 			EnvVars:     []string{"CHANNEL_SERVER_VERSION"},
 			Destination: &ChannelServerVersion,
+		},
+		&cli.StringFlag{
+			Name:        "app-name",
+			Usage:       "the app for which to retrieve the app default versions",
+			EnvVars:     []string{"APP_NAME"},
+			Destination: &AppName,
 		},
 		&cli.StringSliceFlag{
 			Name:        "path-prefix",
@@ -91,7 +98,7 @@ func run(c *cli.Context) error {
 		sources = append(sources, config.StringSource(url))
 	}
 	for index, subkey := range SubKeys.Value() {
-		config := config.NewConfig(ctx, subkey, &config.DurationWait{Duration: intval}, ChannelServerVersion, sources)
+		config := config.NewConfig(ctx, subkey, &config.DurationWait{Duration: intval}, ChannelServerVersion, AppName, sources)
 		configs[PathPrefix.Value()[index]] = config
 	}
 	return server.ListenAndServe(ctx, ListenAddress, configs)

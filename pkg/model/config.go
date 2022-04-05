@@ -39,3 +39,17 @@ type GitHub struct {
 	Owner  string `json:"owner,omitempty"`
 	Repo   string `json:"repo,omitempty"`
 }
+
+type AppDefaultsConfig struct {
+	AppDefaults []AppDefault `json:"appDefaults,omitempty"`
+}
+
+type AppDefault struct {
+	AppName  string    `json:"appName,omitempty"`
+	Defaults []Default `json:"defaults,omitempty"`
+}
+
+type Default struct {
+	AppVersion     string `json:"appVersion,omitempty"`
+	DefaultVersion string `json:"defaultVersion,omitempty"`
+}

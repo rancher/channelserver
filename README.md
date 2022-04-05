@@ -9,6 +9,23 @@ The primary usecase for this project is currently Rancher's [system-upgrade-cont
 
 This service is in proudction for k3s here: https://update.k3s.io/v1-release/channels, which is driven by this config: https://github.com/rancher/k3s/blob/master/channel.yaml. Each channel's `self` link is the URL that will resolve to the latest GitHub release page for that channel.
 
+## Compile and Run 
+1. build the binary
+```
+go build . 
+```
+2. run the server
+```
+ ./channelserver --config-key k3s --path-prefix v1-release --channel-server-version v2.3.1
+```
+
+3. run the following curl command or open the url in the browser
+```
+curl 0.0.0.0:8080/v1-release/release 
+curl 0.0.0.0:8080/v1-release/channel 
+curl 0.0.0.0:8080/v1-release/appdefault
+```
+
 ## License
 Copyright (c) 2020 [Rancher Labs, Inc.](http://rancher.com)
 

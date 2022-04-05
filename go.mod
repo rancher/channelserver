@@ -13,6 +13,6 @@ require (
 	github.com/rancher/apiserver v0.0.0-20201023000256-1a0a904f9197
 	github.com/rancher/wrangler v0.8.11-0.20220120160420-18c996a8e956
 	github.com/sirupsen/logrus v1.6.0
-	github.com/urfave/cli/v2 v2.2.0
+	github.com/urfave/cli/v2 v2.4.0
 	sigs.k8s.io/yaml v1.2.0
 )
