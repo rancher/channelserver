@@ -3,8 +3,9 @@ package config
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 
 	"github.com/blang/semver"
 	"github.com/google/go-github/v29/github"
@@ -31,7 +32,7 @@ func getURLs(ctx context.Context, urls ...Source) ([]byte, int, error) {
 }
 
 func get(ctx context.Context, url Source) ([]byte, error) {
-	content, err := ioutil.ReadFile(url.URL())
+	content, err := os.ReadFile(url.URL())
 	if err == nil {
 		return content, nil
 	}
@@ -51,7 +52,7 @@ func get(ctx context.Context, url Source) ([]byte, error) {
 		return nil, fmt.Errorf("status %v", resp.Status)
 	}
 
-	return ioutil.ReadAll(resp.Body)
+	return io.ReadAll(resp.Body)
 }
 
 func GetChannelsConfig(ctx context.Context, content []byte, subKey string) (*model.ChannelsConfig, error) {
