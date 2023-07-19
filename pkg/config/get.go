@@ -6,12 +6,19 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/blang/semver"
 	"github.com/google/go-github/v29/github"
 	"github.com/rancher/channelserver/pkg/model"
 	"github.com/rancher/wrangler/pkg/data/convert"
 	"sigs.k8s.io/yaml"
+)
+
+var (
+	httpClient = &http.Client{
+		Timeout: time.Second * 5,
+	}
 )
 
 func getURLs(ctx context.Context, urls ...Source) ([]byte, int, error) {
@@ -42,7 +49,7 @@ func get(ctx context.Context, url Source) ([]byte, error) {
 		return nil, err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
