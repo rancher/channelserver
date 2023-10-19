@@ -1,6 +1,6 @@
 module github.com/rancher/channelserver
 
-go 1.19
+go 1.20
 
 replace k8s.io/client-go => k8s.io/client-go v0.20.0
 
