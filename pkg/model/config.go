@@ -1,6 +1,6 @@
 package model
 
-import "github.com/rancher/wrangler/pkg/schemas"
+import "github.com/rancher/wrangler/v2/pkg/schemas"
 
 type ChannelsConfig struct {
 	Channels     []Channel `json:"channels,omitempty"`
