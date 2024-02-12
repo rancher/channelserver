@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rancher/channelserver/pkg/config"
 	"github.com/rancher/channelserver/pkg/server"
-	"github.com/rancher/wrangler/pkg/signals"
+	"github.com/rancher/wrangler/v2/pkg/signals"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )

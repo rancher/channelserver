@@ -11,7 +11,7 @@ import (
 	"github.com/blang/semver"
 	"github.com/google/go-github/v29/github"
 	"github.com/rancher/channelserver/pkg/model"
-	"github.com/rancher/wrangler/pkg/data/convert"
+	"github.com/rancher/wrangler/v2/pkg/data/convert"
 	"sigs.k8s.io/yaml"
 )
 
