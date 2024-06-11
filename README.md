@@ -7,7 +7,7 @@ A channel's latest release can be configured by [explicitly pinning it to a vers
 
 The primary usecase for this project is currently Rancher's [system-upgrade-controller](https://github.com/rancher/system-upgrade-controller), which is used for automating upgrades of k3s and k3os. In the system-upgrade-controller, a user can specify a channel exposed by this sevice as the URL in the plan.spec.channel field.
 
-This service is in proudction for k3s here: https://update.k3s.io/v1-release/channels, which is driven by this config: https://github.com/rancher/k3s/blob/master/channel.yaml. Each channel's `self` link is the URL that will resolve to the latest GitHub release page for that channel.
+This service is in production for k3s here: https://update.k3s.io/v1-release/channels, which is driven by this config: https://github.com/rancher/k3s/blob/master/channel.yaml. Each channel's `self` link is the URL that will resolve to the latest GitHub release page for that channel.
 
 ## Compile and Run 
 1. build the binary
