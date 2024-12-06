@@ -23,6 +23,7 @@ var (
 	ChannelServerVersion string
 	PathPrefix           cli.StringSlice
 	AppName              string
+	GithubToken          string
 )
 
 func main() {
@@ -70,6 +71,11 @@ func main() {
 			Value:       cli.NewStringSlice("v1-release"),
 			Destination: &PathPrefix,
 		},
+		&cli.StringFlag{
+			Name:        "github-token",
+			EnvVars:     []string{"GITHUB_TOKEN"},
+			Destination: &GithubToken,
+		},
 	}
 	app.Action = run
 
@@ -100,9 +106,9 @@ func run(c *cli.Context) error {
 	}
 	for index, subkey := range SubKeys.Value() {
 		prefix := PathPrefix.Value()[index]
-		config := config.NewConfig(ctx, subkey, &config.DurationWait{Duration: intval}, ChannelServerVersion, AppName, sources)
+		config := config.NewConfig(ctx, subkey, &config.DurationWait{Duration: intval}, ChannelServerVersion, AppName, GithubToken, sources)
 		configs[prefix] = config
-		logrus.Infof("Serving channels with subkey %q at /%s", subkey, prefix)
+		logrus.Infof("Serving channels from %v with subkey %q at /%s", sources, subkey, prefix)
 	}
 	return server.ListenAndServe(ctx, ListenAddress, configs)
 }

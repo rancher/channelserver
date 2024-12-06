@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/blang/semver"
-	"github.com/google/go-github/v29/github"
+	"github.com/google/go-github/v67/github"
 	"github.com/rancher/channelserver/pkg/model"
 	"github.com/rancher/wrangler/v3/pkg/data/convert"
 	"sigs.k8s.io/yaml"

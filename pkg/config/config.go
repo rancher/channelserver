@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/go-github/v29/github"
+	"github.com/google/go-github/v67/github"
 	"github.com/rancher/channelserver/pkg/model"
 	"github.com/sirupsen/logrus"
 )
@@ -16,6 +16,7 @@ type Config struct {
 	sync.Mutex
 
 	url               string
+	ghToken           string
 	redirect          *url.URL
 	gh                *github.Client
 	channelsConfig    *model.ChannelsConfig
@@ -50,22 +51,28 @@ func (s StringSource) URL() string {
 	return string(s)
 }
 
-func NewConfig(ctx context.Context, subKey string, wait Wait, channelServerVersion string, appName string, urls []Source) *Config {
+func NewConfig(ctx context.Context, subKey string, wait Wait, channelServerVersion string, appName string, ghToken string, urls []Source) *Config {
 	c := &Config{
+		ghToken:           ghToken,
 		channelsConfig:    &model.ChannelsConfig{},
 		releasesConfig:    &model.ReleasesConfig{},
 		appDefaultsConfig: &model.AppDefaultsConfig{},
 	}
 
-	_, _ = c.loadConfig(ctx, subKey, channelServerVersion, appName, urls...)
+	logrus.Infof("Loading configuration from %v", urls)
+	if index, err := c.loadConfig(ctx, subKey, channelServerVersion, appName, urls...); err != nil {
+		logrus.Fatalf("Failed to load initial config from %s: %v", urls[index].URL(), err)
+	} else {
+		logrus.Infof("Loaded initial configuration from %s in %v", urls[index].URL(), urls)
+	}
 
 	go func() {
 		for wait.Wait(ctx) {
 			if index, err := c.loadConfig(ctx, subKey, channelServerVersion, appName, urls...); err != nil {
-				logrus.Errorf("failed to reload configuration from %s: %v", urls[index].URL(), err)
+				logrus.Errorf("Failed to reload configuration from %s: %v", urls[index].URL(), err)
 			} else {
 				urls = urls[:index+1]
-				logrus.Infof("Loaded configuration from %s in %v", urls[index].URL(), urls)
+				logrus.Infof("Reloaded configuration from %s in %v", urls[index].URL(), urls)
 			}
 		}
 	}()
@@ -103,10 +110,14 @@ func (c *Config) ghClient(config *model.ChannelsConfig) (*github.Client, error) 
 	}
 
 	if c.gh == nil || c.url != config.GitHub.APIURL {
-		if config.GitHub.APIURL == "" {
-			return github.NewClient(nil), nil
+		client := github.NewClient(nil)
+		if c.ghToken != "" {
+			client = client.WithAuthToken(c.ghToken)
 		}
-		return github.NewEnterpriseClient(config.GitHub.APIURL, config.GitHub.APIURL, nil)
+		if config.GitHub.APIURL != "" {
+			return client.WithEnterpriseURLs(config.GitHub.APIURL, config.GitHub.APIURL)
+		}
+		return client, nil
 	}
 	return c.gh, nil
 }
