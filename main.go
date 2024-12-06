@@ -99,8 +99,10 @@ func run(c *cli.Context) error {
 		sources = append(sources, config.StringSource(url))
 	}
 	for index, subkey := range SubKeys.Value() {
+		prefix := PathPrefix.Value()[index]
 		config := config.NewConfig(ctx, subkey, &config.DurationWait{Duration: intval}, ChannelServerVersion, AppName, sources)
-		configs[PathPrefix.Value()[index]] = config
+		configs[prefix] = config
+		logrus.Infof("Serving channels with subkey %q at /%s", subkey, prefix)
 	}
 	return server.ListenAndServe(ctx, ListenAddress, configs)
 }
