@@ -38,6 +38,7 @@ func main() {
 		&cli.StringSliceFlag{
 			Name:        "config-key",
 			EnvVars:     []string{"SUBKEY"},
+			Value:       cli.NewStringSlice(""),
 			Destination: &SubKeys,
 		},
 		&cli.StringFlag{
