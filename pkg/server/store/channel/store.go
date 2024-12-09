@@ -1,4 +1,4 @@
-package store
+package channel
 
 import (
 	"net/http"
@@ -9,18 +9,19 @@ import (
 	"github.com/rancher/wrangler/v3/pkg/schemas/validation"
 )
 
-type ChannelStore struct {
+type Channel struct {
 	empty.Store
 	config *config.Config
 }
 
-func New(config *config.Config) *ChannelStore {
-	return &ChannelStore{
+func New(config *config.Config) *Channel {
+	return &Channel{
 		config: config,
 	}
 }
 
-func (c *ChannelStore) List(_ *types.APIRequest, _ *types.APISchema) (types.APIObjectList, error) {
+func (c *Channel) List(req *types.APIRequest, _ *types.APISchema) (types.APIObjectList, error) {
+	req.Type = "channels"
 	resp := types.APIObjectList{}
 	for _, channel := range c.config.ChannelsConfig().Channels {
 		resp.Objects = append(resp.Objects, types.APIObject{
@@ -32,7 +33,7 @@ func (c *ChannelStore) List(_ *types.APIRequest, _ *types.APISchema) (types.APIO
 	return resp, nil
 }
 
-func (c *ChannelStore) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
+func (c *Channel) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
 	redirect, err := c.config.Redirect(id)
 	if err != nil {
 		return types.APIObject{}, nil

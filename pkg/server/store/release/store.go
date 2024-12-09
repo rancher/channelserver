@@ -17,7 +17,8 @@ func New(config *config.Config) *Store {
 	}
 }
 
-func (c *Store) List(_ *types.APIRequest, _ *types.APISchema) (types.APIObjectList, error) {
+func (c *Store) List(req *types.APIRequest, _ *types.APISchema) (types.APIObjectList, error) {
+	req.Type = "releases"
 	resp := types.APIObjectList{}
 	for _, release := range c.config.ReleasesConfig().Releases {
 		resp.Objects = append(resp.Objects, types.APIObject{
