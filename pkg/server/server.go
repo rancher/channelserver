@@ -14,8 +14,8 @@ import (
 	"github.com/rancher/apiserver/pkg/types"
 	"github.com/rancher/channelserver/pkg/config"
 	"github.com/rancher/channelserver/pkg/model"
-	"github.com/rancher/channelserver/pkg/server/store"
 	"github.com/rancher/channelserver/pkg/server/store/appdefault"
+	"github.com/rancher/channelserver/pkg/server/store/channel"
 	"github.com/rancher/channelserver/pkg/server/store/release"
 )
 
@@ -39,7 +39,7 @@ func NewHandler(configs map[string]*config.Config) http.Handler {
 	for prefix, config := range configs {
 		server := server.DefaultAPIServer()
 		server.Schemas.MustImportAndCustomize(model.Channel{}, func(schema *types.APISchema) {
-			schema.Store = store.New(config)
+			schema.Store = channel.New(config)
 			schema.CollectionMethods = []string{http.MethodGet}
 			schema.ResourceMethods = []string{http.MethodGet}
 		})
