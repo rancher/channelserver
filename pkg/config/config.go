@@ -14,6 +14,12 @@ import (
 
 type Config struct {
 	sync.Mutex
+	loadQueue chan struct{}
+
+	subKey               string
+	channelServerVersion string
+	appName              string
+	urls                 []Source
 
 	url               string
 	ghToken           string
@@ -53,6 +59,12 @@ func (s StringSource) URL() string {
 
 func NewConfig(ctx context.Context, subKey string, wait Wait, channelServerVersion string, appName string, ghToken string, urls []Source) *Config {
 	c := &Config{
+		subKey:               subKey,
+		channelServerVersion: channelServerVersion,
+		appName:              appName,
+		urls:                 urls,
+
+		loadQueue:         make(chan struct{}, 1),
 		ghToken:           ghToken,
 		channelsConfig:    &model.ChannelsConfig{},
 		releasesConfig:    &model.ReleasesConfig{},
@@ -68,16 +80,32 @@ func NewConfig(ctx context.Context, subKey string, wait Wait, channelServerVersi
 
 	go func() {
 		for wait.Wait(ctx) {
-			if index, err := c.loadConfig(ctx, subKey, channelServerVersion, appName, urls...); err != nil {
-				logrus.Errorf("Failed to reload configuration from %s: %v", urls[index].URL(), err)
-			} else {
-				urls = urls[:index+1]
-				logrus.Infof("Reloaded configuration from %s in %v", urls[index].URL(), urls)
-			}
+			_ = c.LoadConfig(ctx)
 		}
 	}()
 
 	return c
+}
+
+func (c *Config) LoadConfig(ctx context.Context) error {
+	select {
+	case c.loadQueue <- struct{}{}:
+		defer func() {
+			<-c.loadQueue
+		}()
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+
+	index, err := c.loadConfig(ctx, c.subKey, c.channelServerVersion, c.appName, c.urls...)
+	if err != nil {
+		logrus.Errorf("Failed to reload configuration from %s: %v", c.urls[index].URL(), err)
+		return err
+	}
+
+	logrus.Infof("Reloaded configuration from %s in %v", c.urls[index].URL(), c.urls)
+	c.urls = c.urls[:index+1]
+	return nil
 }
 
 func (c *Config) loadConfig(ctx context.Context, subKey string, channelServerVersion string, appName string, urls ...Source) (int, error) {
