@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"sync"
@@ -95,7 +96,7 @@ func NewConfig(ctx context.Context, subKey string, wait Wait, channelServerVersi
 func (c *Config) LoadConfig(ctx context.Context) error {
 	locked := c.loadMutex.TryLock()
 	if !locked {
-		return fmt.Errorf("configuration is already being loaded")
+		return errors.New("configuration is already being loaded")
 	}
 	defer c.loadMutex.Unlock()
 
