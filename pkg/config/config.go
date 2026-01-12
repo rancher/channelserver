@@ -14,7 +14,7 @@ import (
 
 type Config struct {
 	sync.Mutex
-	loadQueue chan struct{}
+	loadMutex sync.Mutex
 
 	subKey               string
 	channelServerVersion string
@@ -64,7 +64,6 @@ func NewConfig(ctx context.Context, subKey string, wait Wait, channelServerVersi
 		appName:              appName,
 		urls:                 urls,
 
-		loadQueue:         make(chan struct{}, 1),
 		ghToken:           ghToken,
 		channelsConfig:    &model.ChannelsConfig{},
 		releasesConfig:    &model.ReleasesConfig{},
@@ -73,37 +72,38 @@ func NewConfig(ctx context.Context, subKey string, wait Wait, channelServerVersi
 
 	logrus.Infof("Loading configuration from %v", urls)
 	if index, err := c.loadConfig(ctx, subKey, channelServerVersion, appName, urls...); err != nil {
-		logrus.Fatalf("Failed to load initial config from %s: %v", urls[index].URL(), err)
+		logrus.Fatalf("Failed to load initial config for %s from %s: %v", subKey, urls[index].URL(), err)
 	} else {
-		logrus.Infof("Loaded initial configuration from %s in %v", urls[index].URL(), urls)
+		logrus.Infof("Loaded initial configuration for %s from %s in %v", subKey, urls[index].URL(), urls)
 	}
 
-	go func() {
-		for wait.Wait(ctx) {
-			_ = c.LoadConfig(ctx)
-		}
-	}()
+	if wait != nil {
+		go func() {
+			for wait.Wait(ctx) {
+				if err := c.LoadConfig(ctx); err != nil {
+					logrus.Errorf("Failed to reload configuration for %s: %v", subKey, err)
+				} else {
+					logrus.Infof("Reloaded configuration for %s", subKey)
+				}
+			}
+		}()
+	}
 
 	return c
 }
 
 func (c *Config) LoadConfig(ctx context.Context) error {
-	select {
-	case c.loadQueue <- struct{}{}:
-		defer func() {
-			<-c.loadQueue
-		}()
-	case <-ctx.Done():
-		return ctx.Err()
+	locked := c.loadMutex.TryLock()
+	if !locked {
+		return fmt.Errorf("configuration is already being loaded")
 	}
+	defer c.loadMutex.Unlock()
 
 	index, err := c.loadConfig(ctx, c.subKey, c.channelServerVersion, c.appName, c.urls...)
 	if err != nil {
-		logrus.Errorf("Failed to reload configuration from %s: %v", c.urls[index].URL(), err)
-		return err
+		return fmt.Errorf("failed to load configuration from %s: %w", c.urls[index].URL(), err)
 	}
 
-	logrus.Infof("Reloaded configuration from %s in %v", c.urls[index].URL(), c.urls)
 	c.urls = c.urls[:index+1]
 	return nil
 }
