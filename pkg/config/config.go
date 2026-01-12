@@ -71,10 +71,10 @@ func NewConfig(ctx context.Context, subKey string, wait Wait, channelServerVersi
 	}
 
 	logrus.Infof("Loading configuration from %v", urls)
-	if index, err := c.loadConfig(ctx, subKey, channelServerVersion, appName, urls...); err != nil {
-		logrus.Fatalf("Failed to load initial config for %s from %s: %v", subKey, urls[index].URL(), err)
+	if err := c.LoadConfig(ctx); err != nil {
+		logrus.Fatalf("Failed to load initial config for %s: %v", subKey, err)
 	} else {
-		logrus.Infof("Loaded initial configuration for %s from %s in %v", subKey, urls[index].URL(), urls)
+		logrus.Infof("Loaded initial configuration for %s", subKey)
 	}
 
 	if wait != nil {
@@ -99,37 +99,34 @@ func (c *Config) LoadConfig(ctx context.Context) error {
 	}
 	defer c.loadMutex.Unlock()
 
-	index, err := c.loadConfig(ctx, c.subKey, c.channelServerVersion, c.appName, c.urls...)
+	content, index, err := getURLs(ctx, c.urls...)
 	if err != nil {
-		return fmt.Errorf("failed to load configuration from %s: %w", c.urls[index].URL(), err)
+		return fmt.Errorf("failed to get content from url %s: %v", c.urls[index].URL(), err)
+	}
+
+	config, err := GetChannelsConfig(ctx, content, c.subKey)
+	if err != nil {
+		return fmt.Errorf("failed to get channel config: %v", err)
+	}
+
+	releases, err := GetReleasesConfig(content, c.channelServerVersion, c.subKey)
+	if err != nil {
+		return fmt.Errorf("failed to get release config: %v", err)
+	}
+
+	appDefaultsConfig, err := GetAppDefaultsConfig(content, c.subKey, c.appName)
+	if err != nil {
+		return fmt.Errorf("failed to get app default config: %v", err)
+	}
+
+	err = c.setConfig(ctx, c.channelServerVersion, config, releases, appDefaultsConfig)
+	if err != nil {
+		return fmt.Errorf("failed to set config: %w", err)
 	}
 
 	c.urls = c.urls[:index+1]
+
 	return nil
-}
-
-func (c *Config) loadConfig(ctx context.Context, subKey string, channelServerVersion string, appName string, urls ...Source) (int, error) {
-	content, index, err := getURLs(ctx, urls...)
-	if err != nil {
-		return index, fmt.Errorf("failed to get content from url %s: %v", urls[index].URL(), err)
-	}
-
-	config, err := GetChannelsConfig(ctx, content, subKey)
-	if err != nil {
-		return index, fmt.Errorf("failed to get channel config: %v", err)
-	}
-
-	releases, err := GetReleasesConfig(content, channelServerVersion, subKey)
-	if err != nil {
-		return index, fmt.Errorf("failed to get release config: %v", err)
-	}
-
-	appDefaultsConfig, err := GetAppDefaultsConfig(content, subKey, appName)
-	if err != nil {
-		return index, fmt.Errorf("failed to get app default config: %v", err)
-	}
-
-	return index, c.setConfig(ctx, channelServerVersion, config, releases, appDefaultsConfig)
 }
 
 func (c *Config) ghClient(config *model.ChannelsConfig) (*github.Client, error) {
