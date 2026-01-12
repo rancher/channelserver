@@ -101,22 +101,22 @@ func (c *Config) LoadConfig(ctx context.Context) error {
 
 	content, index, err := getURLs(ctx, c.urls...)
 	if err != nil {
-		return fmt.Errorf("failed to get content from url %s: %v", c.urls[index].URL(), err)
+		return fmt.Errorf("failed to get content from url %s: %w", c.urls[index].URL(), err)
 	}
 
 	config, err := GetChannelsConfig(ctx, content, c.subKey)
 	if err != nil {
-		return fmt.Errorf("failed to get channel config: %v", err)
+		return fmt.Errorf("failed to get channel config: %w", err)
 	}
 
 	releases, err := GetReleasesConfig(content, c.channelServerVersion, c.subKey)
 	if err != nil {
-		return fmt.Errorf("failed to get release config: %v", err)
+		return fmt.Errorf("failed to get release config: %w", err)
 	}
 
 	appDefaultsConfig, err := GetAppDefaultsConfig(content, c.subKey, c.appName)
 	if err != nil {
-		return fmt.Errorf("failed to get app default config: %v", err)
+		return fmt.Errorf("failed to get app default config: %w", err)
 	}
 
 	err = c.setConfig(ctx, c.channelServerVersion, config, releases, appDefaultsConfig)
