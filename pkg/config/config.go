@@ -74,9 +74,9 @@ func NewConfig(ctx context.Context, subKey string, wait Wait, channelServerVersi
 	logrus.Infof("Loading configuration from %v", urls)
 	if err := c.LoadConfig(ctx); err != nil {
 		logrus.Fatalf("Failed to load initial config for %s: %v", subKey, err)
-	} else {
-		logrus.Infof("Loaded initial configuration for %s", subKey)
 	}
+
+	logrus.Infof("Loaded initial configuration for %s", subKey)
 
 	if wait != nil {
 		go func() {
