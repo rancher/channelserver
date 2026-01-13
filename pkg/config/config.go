@@ -93,6 +93,8 @@ func NewConfig(ctx context.Context, subKey string, wait Wait, channelServerVersi
 	return c
 }
 
+// Reload the configuration from the source urls. Concurrent loads will
+// not block and immediately return an error.
 func (c *Config) LoadConfig(ctx context.Context) error {
 	locked := c.refreshMu.TryLock()
 	if !locked {
