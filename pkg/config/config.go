@@ -15,7 +15,7 @@ import (
 
 type Config struct {
 	sync.Mutex
-	loadMutex sync.Mutex
+	refreshMu sync.Mutex
 
 	subKey               string
 	channelServerVersion string
@@ -94,11 +94,11 @@ func NewConfig(ctx context.Context, subKey string, wait Wait, channelServerVersi
 }
 
 func (c *Config) LoadConfig(ctx context.Context) error {
-	locked := c.loadMutex.TryLock()
+	locked := c.refreshMu.TryLock()
 	if !locked {
 		return errors.New("configuration is already being loaded")
 	}
-	defer c.loadMutex.Unlock()
+	defer c.refreshMu.Unlock()
 
 	content, index, err := getURLs(ctx, c.urls...)
 	if err != nil {
