@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"sync"
@@ -14,6 +15,12 @@ import (
 
 type Config struct {
 	sync.Mutex
+	refreshMu sync.Mutex
+
+	subKey               string
+	channelServerVersion string
+	appName              string
+	urls                 []Source
 
 	url               string
 	ghToken           string
@@ -53,6 +60,11 @@ func (s StringSource) URL() string {
 
 func NewConfig(ctx context.Context, subKey string, wait Wait, channelServerVersion string, appName string, ghToken string, urls []Source) *Config {
 	c := &Config{
+		subKey:               subKey,
+		channelServerVersion: channelServerVersion,
+		appName:              appName,
+		urls:                 urls,
+
 		ghToken:           ghToken,
 		channelsConfig:    &model.ChannelsConfig{},
 		releasesConfig:    &model.ReleasesConfig{},
@@ -60,48 +72,64 @@ func NewConfig(ctx context.Context, subKey string, wait Wait, channelServerVersi
 	}
 
 	logrus.Infof("Loading configuration from %v", urls)
-	if index, err := c.loadConfig(ctx, subKey, channelServerVersion, appName, urls...); err != nil {
-		logrus.Fatalf("Failed to load initial config from %s: %v", urls[index].URL(), err)
-	} else {
-		logrus.Infof("Loaded initial configuration from %s in %v", urls[index].URL(), urls)
+	if err := c.LoadConfig(ctx); err != nil {
+		logrus.Fatalf("Failed to load initial config for %s: %v", subKey, err)
 	}
 
-	go func() {
-		for wait.Wait(ctx) {
-			if index, err := c.loadConfig(ctx, subKey, channelServerVersion, appName, urls...); err != nil {
-				logrus.Errorf("Failed to reload configuration from %s: %v", urls[index].URL(), err)
-			} else {
-				urls = urls[:index+1]
-				logrus.Infof("Reloaded configuration from %s in %v", urls[index].URL(), urls)
+	logrus.Infof("Loaded initial configuration for %s", subKey)
+
+	if wait != nil {
+		go func() {
+			for wait.Wait(ctx) {
+				if err := c.LoadConfig(ctx); err != nil {
+					logrus.Errorf("Failed to reload configuration for %s: %v", subKey, err)
+				} else {
+					logrus.Infof("Reloaded configuration for %s", subKey)
+				}
 			}
-		}
-	}()
+		}()
+	}
 
 	return c
 }
 
-func (c *Config) loadConfig(ctx context.Context, subKey string, channelServerVersion string, appName string, urls ...Source) (int, error) {
-	content, index, err := getURLs(ctx, urls...)
+// Reload the configuration from the source urls. Concurrent loads will
+// not block and immediately return an error.
+func (c *Config) LoadConfig(ctx context.Context) error {
+	locked := c.refreshMu.TryLock()
+	if !locked {
+		return errors.New("configuration is already being loaded")
+	}
+	defer c.refreshMu.Unlock()
+
+	content, index, err := getURLs(ctx, c.urls...)
 	if err != nil {
-		return index, fmt.Errorf("failed to get content from url %s: %v", urls[index].URL(), err)
+		return fmt.Errorf("failed to get content from url %s: %w", c.urls[index].URL(), err)
 	}
 
-	config, err := GetChannelsConfig(ctx, content, subKey)
+	config, err := GetChannelsConfig(ctx, content, c.subKey)
 	if err != nil {
-		return index, fmt.Errorf("failed to get channel config: %v", err)
+		return fmt.Errorf("failed to get channel config: %w", err)
 	}
 
-	releases, err := GetReleasesConfig(content, channelServerVersion, subKey)
+	releases, err := GetReleasesConfig(content, c.channelServerVersion, c.subKey)
 	if err != nil {
-		return index, fmt.Errorf("failed to get release config: %v", err)
+		return fmt.Errorf("failed to get release config: %w", err)
 	}
 
-	appDefaultsConfig, err := GetAppDefaultsConfig(content, subKey, appName)
+	appDefaultsConfig, err := GetAppDefaultsConfig(content, c.subKey, c.appName)
 	if err != nil {
-		return index, fmt.Errorf("failed to get app default config: %v", err)
+		return fmt.Errorf("failed to get app default config: %w", err)
 	}
 
-	return index, c.setConfig(ctx, channelServerVersion, config, releases, appDefaultsConfig)
+	err = c.setConfig(ctx, c.channelServerVersion, config, releases, appDefaultsConfig)
+	if err != nil {
+		return fmt.Errorf("failed to set config: %w", err)
+	}
+
+	c.urls = c.urls[:index+1]
+
+	return nil
 }
 
 func (c *Config) ghClient(config *model.ChannelsConfig) (*github.Client, error) {
