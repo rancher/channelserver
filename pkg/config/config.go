@@ -93,6 +93,22 @@ func NewConfig(ctx context.Context, subKey string, wait Wait, channelServerVersi
 	return c
 }
 
+func NewConfigNoLoad(ctx context.Context, subKey string, channelServerVersion string, appName string, ghToken string, urls []Source) *Config {
+	c := &Config{
+		subKey:               subKey,
+		channelServerVersion: channelServerVersion,
+		appName:              appName,
+		urls:                 urls,
+
+		ghToken:           ghToken,
+		channelsConfig:    &model.ChannelsConfig{},
+		releasesConfig:    &model.ReleasesConfig{},
+		appDefaultsConfig: &model.AppDefaultsConfig{},
+	}
+
+	return c
+}
+
 // Reload the configuration from the source urls. Concurrent loads will
 // not block and immediately return an error.
 func (c *Config) LoadConfig(ctx context.Context) error {
