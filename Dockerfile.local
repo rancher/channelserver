@@ -1,7 +1,7 @@
-FROM registry.suse.com/bci/golang:1.22 AS base
+FROM registry.suse.com/bci/golang:1.25 AS base
 
 # renovate: datasource=github-tags depName=golangci/golangci-lint
-ARG GOLANGCI_LINT_VERSION=v1.59.0
+ARG GOLANGCI_LINT_VERSION=v2.11.4 # latest version for golang-ci-lint-action v8  
 
 RUN zypper -n in bash git-core && \
     zypper clean -a
