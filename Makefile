@@ -1,15 +1,12 @@
-TARGETS := $(shell ls scripts)
+TARGETS := build package release test validate validate-ci version
 
-.dapper:
-	@echo Downloading dapper
-	@curl -sL https://releases.rancher.com/dapper/latest/dapper-`uname -s`-`uname -m` > .dapper.tmp
-	@@chmod +x .dapper.tmp
-	@./.dapper.tmp -v
-	@mv .dapper.tmp .dapper
+$(TARGETS):
+	./scripts/$@
 
-$(TARGETS): .dapper
-	./.dapper $@
+ci:
+	docker buildx build --target artifacts --output=. -f Dockerfile.local .
+	./scripts/package
 
 .DEFAULT_GOAL := ci
 
-.PHONY: $(TARGETS)
+.PHONY: $(TARGETS) ci

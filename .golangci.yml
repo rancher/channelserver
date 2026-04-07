@@ -1,0 +1,50 @@
+version: "2"
+
+run:
+  relative-path-mode: wd
+  tests: true
+
+linters:
+  default: none
+  enable:
+    - forbidigo
+    - goconst
+    - govet
+    - ineffassign
+    - misspell
+    - predeclared
+    - revive
+    - unused
+  settings:
+    forbidigo:
+      forbid:
+        - pattern: ^.*\.Sleep.*$
+          msg: No sleeps please use the appropriate polls and watch
+        - pattern: ^fmt\.Print.*$
+          msg: No format prints, please testing or logrus packages
+    goconst:
+      match-constant: true
+      min-len: 2
+      min-occurrences: 10
+    revive:
+      rules:
+        - name: confusing-naming
+          disabled: true
+        - name: exported
+          disabled: false
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+
+issues:
+  max-issues-per-linter: 0
+
+formatters:
+  enable:
+    - goimports
+  exclusions:
+    generated: lax
