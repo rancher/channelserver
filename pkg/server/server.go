@@ -7,8 +7,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
 	"github.com/rancher/apiserver/pkg/server"
 	"github.com/rancher/apiserver/pkg/store/apiroot"
 	"github.com/rancher/apiserver/pkg/types"
@@ -22,7 +20,7 @@ import (
 func ListenAndServe(ctx context.Context, address string, configs map[string]*config.Config) error {
 	h := NewHandler(configs)
 
-	next := handlers.LoggingHandler(os.Stdout, h)
+	next := LoggingHandler(os.Stdout, h)
 	handler := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		user := req.Header.Get("X-SUC-Cluster-ID")
 		if user != "" && req.URL != nil {
@@ -35,39 +33,43 @@ func ListenAndServe(ctx context.Context, address string, configs map[string]*con
 }
 
 func NewHandler(configs map[string]*config.Config) http.Handler {
-	router := mux.NewRouter()
+	var apiserver *server.Server
+	router := http.NewServeMux()
 	for prefix, config := range configs {
-		server := server.DefaultAPIServer()
-		server.Schemas.MustImportAndCustomize(model.Channel{}, func(schema *types.APISchema) {
+		apiserver = server.DefaultAPIServer()
+		apiserver.Schemas.MustImportAndCustomize(model.Channel{}, func(schema *types.APISchema) {
 			schema.Store = channel.New(config)
 			schema.CollectionMethods = []string{http.MethodGet}
 			schema.ResourceMethods = []string{http.MethodGet}
 		})
-		server.Schemas.MustImportAndCustomize(model.Release{}, func(schema *types.APISchema) {
+		apiserver.Schemas.MustImportAndCustomize(model.Release{}, func(schema *types.APISchema) {
 			schema.Store = release.New(config)
 			schema.CollectionMethods = []string{http.MethodGet}
 		})
-		server.Schemas.MustImportAndCustomize(model.AppDefault{}, func(schema *types.APISchema) {
+		apiserver.Schemas.MustImportAndCustomize(model.AppDefault{}, func(schema *types.APISchema) {
 			schema.Store = appdefault.New(config)
 			schema.CollectionMethods = []string{http.MethodGet}
 		})
 		prefix = strings.Trim(prefix, "/")
-		apiroot.Register(server.Schemas, []string{prefix})
-		router.MatcherFunc(setType("apiRoot", prefix)).Path("/").Handler(server)
-		router.MatcherFunc(setType("apiRoot", prefix)).Path("/{name}").Handler(server)
-		router.Path("/{prefix:" + prefix + "}/{type}").Handler(server)
-		router.Path("/{prefix:" + prefix + "}/{type}/{name}").Handler(server)
+		apiroot.Register(apiserver.Schemas, []string{prefix})
+		router.Handle("/"+prefix+"/{type}", setPathValues(apiserver, "", prefix))
+		router.Handle("/"+prefix+"/{type}/{name}", setPathValues(apiserver, "", prefix))
+	}
+	if apiserver != nil {
+		router.Handle("/{$}", setPathValues(apiserver, "apiRoot", ""))
+		router.Handle("/{name}", setPathValues(apiserver, "apiRoot", ""))
 	}
 	return router
 }
 
-func setType(t string, pathPrefix string) mux.MatcherFunc {
-	return func(request *http.Request, match *mux.RouteMatch) bool {
-		if match.Vars == nil {
-			match.Vars = map[string]string{}
+func setPathValues(handler http.Handler, typeName, prefix string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if typeName != "" {
+			r.SetPathValue("type", typeName)
 		}
-		match.Vars["type"] = t
-		match.Vars["prefix"] = pathPrefix
-		return true
-	}
+		if prefix != "" {
+			r.SetPathValue("prefix", prefix)
+		}
+		handler.ServeHTTP(w, r)
+	})
 }
