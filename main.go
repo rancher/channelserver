@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rancher/channelserver/pkg/config"
+	"github.com/rancher/channelserver/pkg/scarf"
 	"github.com/rancher/channelserver/pkg/server"
 	"github.com/rancher/channelserver/pkg/wait"
 	"github.com/rancher/wrangler/v3/pkg/signals"
@@ -28,6 +30,9 @@ var (
 	URLs                 cli.StringSlice
 	SubKeys              cli.StringSlice
 	PathPrefix           cli.StringSlice
+	ScarfEndpoint        string
+	ScarfRateLimitWindow time.Duration
+	ScarfRateLimitSize   int
 )
 
 func main() {
@@ -99,6 +104,26 @@ func main() {
 			EnvVars:     []string{"DEBUG"},
 			Destination: &Debug,
 		},
+		&cli.StringFlag{
+			Name:        "scarf-endpoint",
+			Usage:       "Scarf gateway endpoint template with a {channel} placeholder; empty disables reporting",
+			EnvVars:     []string{"SCARF_ENDPOINT"},
+			Destination: &ScarfEndpoint,
+		},
+		&cli.DurationFlag{
+			Name:        "scarf-rate-limit-window",
+			Usage:       "per-cluster Scarf event rate-limit window (e.g. 24h); 0 disables",
+			EnvVars:     []string{"SCARF_RATE_LIMIT_WINDOW"},
+			Value:       24 * time.Hour,
+			Destination: &ScarfRateLimitWindow,
+		},
+		&cli.IntFlag{
+			Name:        "scarf-rate-limit-size",
+			Usage:       "max distinct cluster IDs tracked for rate limiting",
+			EnvVars:     []string{"SCARF_RATE_LIMIT_SIZE"},
+			Value:       scarf.DefaultCacheSize,
+			Destination: &ScarfRateLimitSize,
+		},
 	}
 	app.Action = run
 
@@ -143,5 +168,10 @@ func run(c *cli.Context) error {
 		configs[prefix] = config
 		logrus.Infof("Serving channels from %v with subkey %q at /%s", sources, subkey, prefix)
 	}
-	return server.ListenAndServe(ctx, ListenAddress, configs)
+
+	if ScarfRateLimitWindow < 0 {
+		return errors.Errorf("scarf-rate-limit-window must be >= 0, got %v", ScarfRateLimitWindow)
+	}
+	svc := scarf.New(ctx, ScarfEndpoint, ScarfRateLimitWindow, ScarfRateLimitSize)
+	return server.ListenAndServe(ctx, ListenAddress, configs, svc)
 }

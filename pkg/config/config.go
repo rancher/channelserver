@@ -236,14 +236,16 @@ func (c *Config) AppDefaultsConfig() *model.AppDefaultsConfig {
 	return c.appDefaultsConfig
 }
 
-func (c *Config) Redirect(id string) (string, error) {
+// Redirect resolves a channel id to its redirect URL and resolved version;
+// both empty when the channel is unknown or has no latest version.
+func (c *Config) Redirect(id string) (string, string, error) {
 	for _, channel := range c.channelsConfig.Channels {
 		if channel.Name == id && channel.Latest != "" {
 			return c.redirect.ResolveReference(&url.URL{
 				Path: channel.Latest,
-			}).String(), nil
+			}).String(), channel.Latest, nil
 		}
 	}
 
-	return "", nil
+	return "", "", nil
 }
