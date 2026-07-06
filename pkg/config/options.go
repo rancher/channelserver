@@ -46,6 +46,13 @@ func WithWaiter(waiter wait.Wait) OptionsFunc {
 	}
 }
 
+func WithFatalLoad(fatal bool) OptionsFunc {
+	return func(c *Config) error {
+		c.fatal = fatal
+		return nil
+	}
+}
+
 func WithRecorder(recorder Recorder) OptionsFunc {
 	return func(c *Config) error {
 		c.recorder = recorder

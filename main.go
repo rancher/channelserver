@@ -168,9 +168,21 @@ func run(c *cli.Context) error {
 	for _, url := range URLs.Value() {
 		sources = append(sources, config.StringSource(url))
 	}
+
 	for index, subkey := range SubKeys.Value() {
 		prefix := PathPrefix.Value()[index]
-		config := config.NewConfig(ctx, subkey, waiter, ChannelServerVersion, AppName, auth, sources)
+		config, err := config.New(ctx,
+			config.WithSubkey(subkey),
+			config.WithWaiter(waiter),
+			config.WithChannelServerVersion(ChannelServerVersion),
+			config.WithAppName(AppName),
+			config.WithAuth(auth),
+			config.WithSources(sources),
+			config.WithFatalLoad(RefreshFatal),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to create config for %q: %w", prefix, err)
+		}
 		configs[prefix] = config
 		logrus.Infof("Serving channels from %v with subkey %q at /%s", sources, subkey, prefix)
 	}
