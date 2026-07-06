@@ -170,7 +170,7 @@ func run(c *cli.Context) error {
 	}
 	for index, subkey := range SubKeys.Value() {
 		prefix := PathPrefix.Value()[index]
-		config := config.NewConfig(ctx, subkey, waiter, ChannelServerVersion, AppName, auth, sources, RefreshFatal)
+		config := config.NewConfig(ctx, subkey, waiter, ChannelServerVersion, AppName, auth, sources)
 		configs[prefix] = config
 		logrus.Infof("Serving channels from %v with subkey %q at /%s", sources, subkey, prefix)
 	}

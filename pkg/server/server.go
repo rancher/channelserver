@@ -73,7 +73,7 @@ func NewHandler(configs map[string]*config.Config) http.Handler {
 	}
 	if liveconfig != nil {
 		router.Handle("/livez", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if liveconfig.Valid {
+			if liveconfig.IsValid() {
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte("configuration is valid\r\n"))
 			} else {

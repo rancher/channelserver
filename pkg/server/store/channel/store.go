@@ -34,7 +34,7 @@ func (c *Channel) List(req *types.APIRequest, _ *types.APISchema) (types.APIObje
 }
 
 func (c *Channel) ByID(apiOp *types.APIRequest, schema *types.APISchema, id string) (types.APIObject, error) {
-	redirect, err := c.config.Redirect(id)
+	redirect, err := c.config.Redirect(id, apiOp)
 	if err != nil {
 		return types.APIObject{}, nil
 	}
