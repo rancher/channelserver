@@ -44,10 +44,8 @@ func ListenAndServe(ctx context.Context, address string, configs map[string]*con
 
 func NewHandler(configs map[string]*config.Config) http.Handler {
 	var apiserver *server.Server
-	var liveconfig *config.Config
 	router := http.NewServeMux()
 	for prefix, config := range configs {
-		liveconfig = config
 		apiserver = server.DefaultAPIServer()
 		apiserver.Schemas.MustImportAndCustomize(model.Channel{}, func(schema *types.APISchema) {
 			schema.Store = channel.New(config)
@@ -70,17 +68,6 @@ func NewHandler(configs map[string]*config.Config) http.Handler {
 	if apiserver != nil {
 		router.Handle("/{$}", setPathValues(apiserver, "apiRoot", ""))
 		router.Handle("/{name}", setPathValues(apiserver, "apiRoot", ""))
-	}
-	if liveconfig != nil {
-		router.Handle("/livez", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if liveconfig.IsValid() {
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte("configuration is valid\r\n"))
-			} else {
-				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte("configuration is stale\r\n"))
-			}
-		}))
 	}
 	return router
 }

@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
+	"sync"
 
-	"github.com/pkg/errors"
 	"github.com/rancher/channelserver/pkg/config"
+	"github.com/rancher/channelserver/pkg/metrics"
 	"github.com/rancher/channelserver/pkg/server"
 	"github.com/rancher/channelserver/pkg/wait"
 	"github.com/rancher/wrangler/v3/pkg/signals"
@@ -23,6 +26,7 @@ var (
 	RefreshSchedule      string
 	ChannelServerVersion string
 	ListenAddress        string
+	MetricsListenAddress string
 	AppName              string
 	GithubToken          string
 	GithubApp            config.GithubApp
@@ -72,6 +76,12 @@ func main() {
 			EnvVars:     []string{"LISTEN_ADDRESS"},
 			Value:       "0.0.0.0:8080",
 			Destination: &ListenAddress,
+		},
+		&cli.StringFlag{
+			Name:        "metrics-listen-address",
+			EnvVars:     []string{"METRICS_LISTEN_ADDRESS"},
+			Value:       "0.0.0.0:8081",
+			Destination: &MetricsListenAddress,
 		},
 		&cli.StringFlag{
 			Name:        "channel-server-version",
@@ -137,7 +147,8 @@ func run(c *cli.Context) error {
 	)
 
 	logrus.SetOutput(os.Stderr)
-	ctx := signals.SetupSignalContext()
+	ctx, cancel := context.WithCancel(signals.SetupSignalContext())
+	defer cancel()
 	if Debug {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
@@ -162,7 +173,7 @@ func run(c *cli.Context) error {
 	}
 
 	if len(SubKeys.Value()) != len(PathPrefix.Value()) {
-		return errors.Errorf("keys-prefix lengths are not equal %s %s %s", PathPrefix.Value(), SubKeys.Value(), ListenAddress)
+		return fmt.Errorf("keys-prefix lengths are not equal %s %s %s", PathPrefix.Value(), SubKeys.Value(), ListenAddress)
 	}
 
 	for _, url := range URLs.Value() {
@@ -186,5 +197,24 @@ func run(c *cli.Context) error {
 		configs[prefix] = config
 		logrus.Infof("Serving channels from %v with subkey %q at /%s", sources, subkey, prefix)
 	}
-	return server.ListenAndServe(ctx, ListenAddress, configs)
+
+	wg := &sync.WaitGroup{}
+	wg.Go(func() {
+		if lerr := server.ListenAndServe(ctx, ListenAddress, configs); lerr != nil {
+			err = errors.Join(err, lerr)
+			cancel()
+		}
+	})
+
+	if MetricsListenAddress != "" {
+		wg.Go(func() {
+			if lerr := metrics.ListenAndServe(ctx, MetricsListenAddress, configs); lerr != nil {
+				err = errors.Join(err, lerr)
+				cancel()
+			}
+		})
+	}
+
+	wg.Wait()
+	return err
 }
