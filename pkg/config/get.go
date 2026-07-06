@@ -20,13 +20,13 @@ var (
 	pageSize   = 100
 	httpClient = &http.Client{
 		Timeout:   time.Second * 5,
-		Transport: &loggingTransport{},
+		Transport: &LoggingTransport{},
 	}
 )
 
-type loggingTransport struct{}
+type LoggingTransport struct{}
 
-func (l *loggingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+func (l *LoggingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	logrus.Debugf("Making request: %s %s", req.Method, req.URL)
 	return http.DefaultTransport.RoundTrip(req)
 }

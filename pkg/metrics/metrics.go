@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rancher/channelserver/pkg/config"
+	"k8s.io/component-base/metrics/legacyregistry"
 )
 
 func ListenAndServe(ctx context.Context, address string, configs map[string]*config.Config) error {
@@ -17,7 +17,7 @@ func ListenAndServe(ctx context.Context, address string, configs map[string]*con
 		Handler: router,
 	}
 
-	router.Handle("/metrics", promhttp.Handler())
+	router.Handle("/metrics", legacyregistry.Handler())
 	router.Handle("/livez", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		for index, config := range configs {
 			if !config.IsValid() {

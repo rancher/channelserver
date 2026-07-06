@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/rancher/channelserver/pkg/config"
 	"github.com/rancher/channelserver/pkg/metrics"
+	"github.com/rancher/channelserver/pkg/scarf"
 	"github.com/rancher/channelserver/pkg/server"
 	"github.com/rancher/channelserver/pkg/wait"
 	"github.com/rancher/wrangler/v3/pkg/signals"
@@ -29,10 +31,16 @@ var (
 	MetricsListenAddress string
 	AppName              string
 	GithubToken          string
-	GithubApp            config.GithubApp
-	URLs                 cli.StringSlice
-	SubKeys              cli.StringSlice
-	PathPrefix           cli.StringSlice
+
+	ScarfEndpoint          string
+	ScarfEventInterval     time.Duration
+	ScarfClusterLRUMaxSize int
+	ScarfTrustedIPs        cli.StringSlice
+
+	GithubApp  config.GithubApp
+	URLs       cli.StringSlice
+	SubKeys    cli.StringSlice
+	PathPrefix cli.StringSlice
 )
 
 func main() {
@@ -124,6 +132,32 @@ func main() {
 			EnvVars:     []string{"GITHUB_APP_INSTALLATION_ID"},
 			Destination: &GithubApp.InstallationID,
 		},
+		&cli.StringFlag{
+			Name:        "scarf-endpoint",
+			Usage:       "Scarf gateway endpoint template with a {channel} placeholder; empty disables reporting",
+			EnvVars:     []string{"SCARF_ENDPOINT"},
+			Destination: &ScarfEndpoint,
+		},
+		&cli.StringSliceFlag{
+			Name:        "scarf-trusted-ips",
+			Usage:       "IPs or CIDRs to trust to set X-Forwarded-* headers for client addresses reported in Scarf events",
+			EnvVars:     []string{"SCARF_TRUSTED_IPS"},
+			Destination: &ScarfTrustedIPs,
+		},
+		&cli.DurationFlag{
+			Name:        "scarf-event-interval",
+			Usage:       "Interval at which to emit aggregated Scarf events",
+			EnvVars:     []string{"SCARF_EVENT_INTERVAL"},
+			Value:       24 * time.Hour,
+			Destination: &ScarfEventInterval,
+		},
+		&cli.IntFlag{
+			Name:        "scarf-cluster-lru-max-size",
+			Usage:       "Maximum size of cluster-id LRU for Scarf event aggregation",
+			EnvVars:     []string{"SCARF_CLUSTER_LRU_MAX_SIZE"},
+			Value:       scarf.DefaultLRUMaxSize,
+			Destination: &ScarfClusterLRUMaxSize,
+		},
 		&cli.BoolFlag{
 			Name:        "debug",
 			EnvVars:     []string{"DEBUG"},
@@ -144,6 +178,7 @@ func run(c *cli.Context) error {
 		waiter  wait.Wait
 		err     error
 		auth    config.GithubAuth
+		rec     config.Recorder
 	)
 
 	logrus.SetOutput(os.Stderr)
@@ -160,6 +195,15 @@ func run(c *cli.Context) error {
 	}
 	if err != nil {
 		return err
+	}
+
+	if ScarfEndpoint != "" {
+		userAgent := c.App.Name + "/" + c.App.Version
+		scarf, err := scarf.New(ctx, ScarfEndpoint, userAgent, ScarfTrustedIPs.Value(), ScarfEventInterval, ScarfClusterLRUMaxSize)
+		if err != nil {
+			return err
+		}
+		rec = scarf
 	}
 
 	if GithubToken != "" {
@@ -190,6 +234,7 @@ func run(c *cli.Context) error {
 			config.WithAuth(auth),
 			config.WithSources(sources),
 			config.WithFatalLoad(RefreshFatal),
+			config.WithRecorder(rec),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to create config for %q: %w", prefix, err)
