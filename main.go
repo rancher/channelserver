@@ -31,6 +31,7 @@ var (
 	MetricsListenAddress string
 	AppName              string
 	GithubToken          string
+	UIBase               string
 
 	ScarfEndpoint          string
 	ScarfEventInterval     time.Duration
@@ -107,6 +108,13 @@ func main() {
 			EnvVars:     []string{"PATH_PREFIX"},
 			Value:       cli.NewStringSlice("v1-release"),
 			Destination: &PathPrefix,
+		},
+		&cli.StringFlag{
+			Name:        "ui-base",
+			Usage:       "Base path for API UI resources",
+			EnvVars:     []string{"UI_BASE"},
+			Value:       "https://releases.rancher.com/api-ui/1.1.11/",
+			Destination: &UIBase,
 		},
 		&cli.StringFlag{
 			Name:        "github-token",
@@ -235,6 +243,7 @@ func run(c *cli.Context) error {
 			config.WithSources(sources),
 			config.WithFatalLoad(RefreshFatal),
 			config.WithRecorder(rec),
+			config.WithUIBaseURL(UIBase),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to create config for %q: %w", prefix, err)

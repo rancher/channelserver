@@ -37,6 +37,7 @@ type Config struct {
 	appName              string
 	urls                 []Source
 	url                  string
+	uiBase               string
 	ghAuth               GithubAuth
 	recorder             Recorder
 	waiter               wait.Wait
@@ -147,6 +148,10 @@ func NewConfigNoLoad(ctx context.Context, subKey string, channelServerVersion st
 // If this returns false, config may be empty or stale.
 func (c *Config) IsValid() bool {
 	return c != nil && c.valid
+}
+
+func (c *Config) UIBase() string {
+	return c.uiBase
 }
 
 // Reload the configuration from the source urls. Concurrent loads will

@@ -59,3 +59,10 @@ func WithRecorder(recorder Recorder) OptionsFunc {
 		return nil
 	}
 }
+
+func WithUIBaseURL(baseURL string) OptionsFunc {
+	return func(c *Config) error {
+		c.uiBase = baseURL
+		return nil
+	}
+}

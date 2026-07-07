@@ -11,6 +11,7 @@ import (
 	"github.com/rancher/apiserver/pkg/server"
 	"github.com/rancher/apiserver/pkg/store/apiroot"
 	"github.com/rancher/apiserver/pkg/types"
+	"github.com/rancher/apiserver/pkg/writer"
 	"github.com/rancher/channelserver/pkg/config"
 	"github.com/rancher/channelserver/pkg/model"
 	"github.com/rancher/channelserver/pkg/server/store/appdefault"
@@ -44,9 +45,15 @@ func ListenAndServe(ctx context.Context, address string, configs map[string]*con
 
 func NewHandler(configs map[string]*config.Config) http.Handler {
 	var apiserver *server.Server
+	var rootPrefix string
 	router := http.NewServeMux()
 	for prefix, config := range configs {
+		prefix = strings.Trim(prefix, "/")
+		rootPrefix = prefix
 		apiserver = server.DefaultAPIServer()
+		if base := config.UIBase(); base != "" {
+			apiserver.CustomAPIUIResponseWriter(sg(base+"ui.min.css"), sg(base+"ui.min.js"), nil)
+		}
 		apiserver.Schemas.MustImportAndCustomize(model.Channel{}, func(schema *types.APISchema) {
 			schema.Store = channel.New(config)
 			schema.CollectionMethods = []string{http.MethodGet}
@@ -60,14 +67,13 @@ func NewHandler(configs map[string]*config.Config) http.Handler {
 			schema.Store = appdefault.New(config)
 			schema.CollectionMethods = []string{http.MethodGet}
 		})
-		prefix = strings.Trim(prefix, "/")
 		apiroot.Register(apiserver.Schemas, []string{prefix})
 		router.Handle("/"+prefix+"/{type}", setPathValues(apiserver, "", prefix))
 		router.Handle("/"+prefix+"/{type}/{name}", setPathValues(apiserver, "", prefix))
 	}
 	if apiserver != nil {
-		router.Handle("/{$}", setPathValues(apiserver, "apiRoot", ""))
-		router.Handle("/{name}", setPathValues(apiserver, "apiRoot", ""))
+		router.Handle("/{$}", setPathValues(apiserver, "apiRoot", rootPrefix))
+		router.Handle("/{name}", setPathValues(apiserver, "apiRoot", rootPrefix))
 	}
 	return router
 }
@@ -82,4 +88,8 @@ func setPathValues(handler http.Handler, typeName, prefix string) http.Handler {
 		}
 		handler.ServeHTTP(w, r)
 	})
+}
+
+func sg(val string) writer.StringGetter {
+	return func() string { return val }
 }
