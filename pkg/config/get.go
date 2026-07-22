@@ -24,10 +24,15 @@ var (
 	}
 )
 
-type LoggingTransport struct{}
+type LoggingTransport struct {
+	Transport http.RoundTripper
+}
 
 func (l *LoggingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	logrus.Debugf("Making request: %s %s", req.Method, req.URL)
+	if l.Transport != nil {
+		return l.Transport.RoundTrip(req)
+	}
 	return http.DefaultTransport.RoundTrip(req)
 }
 

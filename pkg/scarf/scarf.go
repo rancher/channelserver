@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/rancher/channelserver/pkg/config"
+	"github.com/rancher/channelserver/pkg/dialer"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/operation"
 	"k8s.io/apimachinery/pkg/api/validate"
@@ -29,12 +30,23 @@ const (
 )
 
 var (
-	defaultWorkers     = 4
+	defaultWorkers     = 128
 	channelPlaceholder = "{channel}"
+
+	dialCacheTransport = &http.Transport{
+		Proxy:                 http.ProxyFromEnvironment,
+		DialContext:           dialer.CachingDialer.DialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          defaultWorkers,
+		MaxConnsPerHost:       defaultWorkers,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
 
 	httpClient = http.Client{
 		Timeout:       5 * time.Second,
-		Transport:     &config.LoggingTransport{},
+		Transport:     &config.LoggingTransport{Transport: dialCacheTransport},
 		CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }, // do not follow redirects
 	}
 )
